@@ -1,0 +1,122 @@
+.metrics-panel {
+    background: white;
+    padding: 1rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+
+.metrics-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.controls {
+    display: flex;
+    gap: 1rem;
+}
+
+.bar-chart-container {
+    height: 400px;
+    /* Taller charts */
+    width: 100%;
+    overflow-x: auto;
+    /* Enable horizontal scroll */
+    padding-bottom: 20px;
+    /* Space for scrollbar */
+}
+
+.bar-chart-layout {
+    display: flex;
+    /* align-items: flex-end; REMOVED to allow stretch */
+    height: 350px;
+    gap: 8px;
+    padding-top: 20px;
+    padding-left: 10px;
+    padding-right: 10px;
+    min-width: 100%;
+    width: max-content;
+}
+
+
+.bar-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    /* Align content to bottom */
+    height: 100%;
+    /* Fill container height */
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 60px;
+    /* Wider for horizontal labels */
+    flex-shrink: 0;
+}
+
+.bar-item:hover {
+    opacity: 0.8;
+}
+
+.bar-fill {
+    width: 100%;
+    background-color: #3b82f6;
+    border-radius: 4px 4px 0 0;
+    min-height: 4px;
+    /* Ensure visibility */
+}
+
+/* Darker Text for Accessibility */
+.metrics-panel {
+    background: white;
+    padding: 1rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    /* Slightly stronger shadow */
+    margin-bottom: 2rem;
+    color: #111827;
+    /* Dark text default */
+}
+
+.metrics-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #111827;
+    /* Dark black/gray */
+}
+
+/* ... existing styles ... */
+
+.bar-label {
+    font-size: 1.1rem;
+    /* Larger font as requested */
+    font-weight: 700;
+    margin-top: 8px;
+    color: #111827;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: center;
+    width: 100%;
+
+    /* Horizontal text */
+    transform: none;
+    writing-mode: horizontal-tb;
+    text-orientation: mixed;
+    height: 30px;
+    /* Fixed height to align baselines of bars above */
+    display: block;
+    /* distinct block */
+    padding-top: 5px;
+}
+
+.bar-value {
+    font-size: 0.85rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: #000000;
+    /* Pure black for values */
+}
