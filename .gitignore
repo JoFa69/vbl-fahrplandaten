@@ -13,6 +13,7 @@ dist/
 # Database (Large files)
 *.duckdb
 *.db
+!20261231_fahrplandaten_2027.db
 *.x10
 data/
 
