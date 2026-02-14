@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: "Inter", "Inter Fallback", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "JetBrains Mono Fallback", monospace;
+
+  --color-background: #0a0a0f;
+  --color-foreground: #e4e4ec;
+  --color-card: #111118;
+  --color-card-foreground: #e4e4ec;
+  --color-popover: #111118;
+  --color-popover-foreground: #e4e4ec;
+  --color-primary: #3b82f6;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #1e1e2a;
+  --color-secondary-foreground: #a1a1b5;
+  --color-muted: #16161f;
+  --color-muted-foreground: #71717a;
+  --color-accent: #22d3ee;
+  --color-accent-foreground: #0a0a0f;
+  --color-destructive: #ef4444;
+  --color-destructive-foreground: #ffffff;
+  --color-border: #1e1e2e;
+  --color-input: #1e1e2e;
+  --color-ring: #3b82f6;
+  --color-sidebar: #0d0d14;
+  --color-sidebar-foreground: #a1a1b5;
+  --color-sidebar-active: #3b82f6;
+  --color-chart-blue: #3b82f6;
+  --color-chart-cyan: #22d3ee;
+  --color-chart-green: #10b981;
+  --color-chart-amber: #f59e0b;
+  --color-chart-rose: #f43f5e;
+  --radius: 0.5rem;
+}
+
+* {
+  border-color: var(--color-border);
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+}
