@@ -10,6 +10,7 @@ import { DbTableList } from "@/components/db-table-list"
 import { dbStats } from "@/lib/mock-data"
 
 export default function OverviewPage() {
+  console.log("[v0] OverviewPage rendered")
   return (
     <div className="p-6 space-y-6">
       <div>
