@@ -1,18 +1,9 @@
-import type { Metadata, Viewport } from "next"
-import { Inter, JetBrains_Mono } from "next/font/google"
-import { Sidebar } from "@/components/sidebar"
+import type { Metadata } from "next"
 import "./globals.css"
 
-const inter = Inter({ subsets: ["latin"] })
-const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"] })
-
 export const metadata: Metadata = {
-  title: "VBL Fahrplandaten - Dashboard",
-  description: "Analyse-Dashboard fuer VDV 452 Fahrplandaten der Verkehrsbetriebe Luzern",
-}
-
-export const viewport: Viewport = {
-  themeColor: "#0a0a0f",
+  title: "VBL Fahrplandaten",
+  description: "Dashboard fuer VDV 452 Fahrplandaten",
 }
 
 export default function RootLayout({
@@ -22,13 +13,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="de" className="dark">
-      <body
-        className={`${inter.className} ${jetbrainsMono.className} antialiased`}
-      >
-        <Sidebar />
-        <main className="ml-60 min-h-screen">
-          {children}
-        </main>
+      <body className="antialiased">
+        {children}
       </body>
     </html>
   )
