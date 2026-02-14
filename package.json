@@ -3,9 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --config frontend/vite.config.js",
-    "build": "vite build --config frontend/vite.config.js",
-    "preview": "vite preview --config frontend/vite.config.js"
+    "dev": "vite --root frontend --port 3000 --host",
+    "build": "vite build --root frontend",
+    "preview": "vite preview --root frontend"
   },
   "dependencies": {
     "axios": "^1.13.5",
