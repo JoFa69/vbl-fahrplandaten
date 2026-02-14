@@ -1,4 +1,4 @@
-#ro.app-container {
+.app-container {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   min-height: 100vh;
   display: flex;
