@@ -4,48 +4,52 @@ import { cn } from "@/lib/utils"
 interface KpiCardProps {
   title: string
   value: string | number
-  subtitle?: string
+  subtitle: string
   icon: LucideIcon
-  trend?: { value: string; positive: boolean }
-  className?: string
+  variant?: "default" | "warning"
 }
 
-export function KpiCard({ title, value, subtitle, icon: Icon, trend, className }: KpiCardProps) {
+export function KpiCard({ title, value, subtitle, icon: Icon, variant = "default" }: KpiCardProps) {
+  const isWarning = variant === "warning"
+
   return (
-    <div
-      className={cn(
-        "rounded-lg border bg-card p-5 transition-colors hover:border-primary/30",
-        className
-      )}
-    >
+    <div className={cn(
+      "rounded-xl border p-5 transition-shadow hover:shadow-md",
+      isWarning
+        ? "bg-card border-warning/30 ring-1 ring-warning/10"
+        : "bg-card border-border"
+    )}>
       <div className="flex items-start justify-between">
         <div className="space-y-1">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+          <p className={cn(
+            "text-[11px] font-medium uppercase tracking-wider",
+            isWarning ? "text-warning" : "text-muted-foreground"
+          )}>
             {title}
           </p>
-          <p className="text-2xl font-semibold text-card-foreground tabular-nums">
+          <p className={cn(
+            "text-2xl font-bold tracking-tight",
+            isWarning ? "text-warning" : "text-card-foreground"
+          )}>
             {typeof value === "number" ? value.toLocaleString("de-CH") : value}
           </p>
-          {subtitle && (
-            <p className="text-xs text-muted-foreground">{subtitle}</p>
-          )}
         </div>
-        <div className="rounded-md bg-primary/10 p-2">
-          <Icon className="h-4 w-4 text-primary" />
+        <div className={cn(
+          "flex items-center justify-center w-10 h-10 rounded-lg",
+          isWarning ? "bg-warning/10" : "bg-primary/8"
+        )}>
+          <Icon className={cn(
+            "w-5 h-5",
+            isWarning ? "text-warning" : "text-primary"
+          )} />
         </div>
       </div>
-      {trend && (
-        <div className="mt-3 flex items-center gap-1">
-          <span
-            className={cn(
-              "text-xs font-medium",
-              trend.positive ? "text-chart-green" : "text-destructive"
-            )}
-          >
-            {trend.value}
-          </span>
-        </div>
-      )}
+      <p className={cn(
+        "text-xs mt-2",
+        isWarning ? "text-warning/70" : "text-muted-foreground"
+      )}>
+        {subtitle}
+      </p>
     </div>
   )
 }

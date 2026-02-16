@@ -4,33 +4,38 @@
   --font-sans: "Inter", "Inter Fallback", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", "JetBrains Mono Fallback", monospace;
 
-  --color-background: #0a0a0f;
-  --color-foreground: #e4e4ec;
-  --color-card: #111118;
-  --color-card-foreground: #e4e4ec;
-  --color-popover: #111118;
-  --color-popover-foreground: #e4e4ec;
-  --color-primary: #3b82f6;
+  --color-background: #f8fafc;
+  --color-foreground: #0f172a;
+  --color-card: #ffffff;
+  --color-card-foreground: #0f172a;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #0f172a;
+  --color-primary: #1e3a5f;
   --color-primary-foreground: #ffffff;
-  --color-secondary: #1e1e2a;
-  --color-secondary-foreground: #a1a1b5;
-  --color-muted: #16161f;
-  --color-muted-foreground: #71717a;
-  --color-accent: #22d3ee;
-  --color-accent-foreground: #0a0a0f;
-  --color-destructive: #ef4444;
+  --color-secondary: #f1f5f9;
+  --color-secondary-foreground: #334155;
+  --color-muted: #f1f5f9;
+  --color-muted-foreground: #64748b;
+  --color-accent: #e2e8f0;
+  --color-accent-foreground: #0f172a;
+  --color-destructive: #dc2626;
   --color-destructive-foreground: #ffffff;
-  --color-border: #1e1e2e;
-  --color-input: #1e1e2e;
-  --color-ring: #3b82f6;
-  --color-sidebar: #0d0d14;
-  --color-sidebar-foreground: #a1a1b5;
-  --color-sidebar-active: #3b82f6;
-  --color-chart-blue: #3b82f6;
-  --color-chart-cyan: #22d3ee;
-  --color-chart-green: #10b981;
+  --color-warning: #dc2626;
+  --color-warning-foreground: #ffffff;
+  --color-border: #e2e8f0;
+  --color-input: #e2e8f0;
+  --color-ring: #1e3a5f;
+  --color-sidebar: #0f172a;
+  --color-sidebar-foreground: #94a3b8;
+  --color-sidebar-active: #38bdf8;
+  --color-sidebar-muted: #1e293b;
+  --color-sidebar-border: #1e293b;
+  --color-chart-blue: #1e3a5f;
+  --color-chart-sky: #38bdf8;
+  --color-chart-emerald: #10b981;
   --color-chart-amber: #f59e0b;
   --color-chart-rose: #f43f5e;
+  --color-chart-slate: #94a3b8;
   --radius: 0.5rem;
 }
 
@@ -42,4 +47,30 @@ body {
   background: var(--color-background);
   color: var(--color-foreground);
   font-family: var(--font-sans);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-accent);
+  border-radius: 3px;
+}
+
+/* Dual-thumb slider styles */
+.range-track {
+  height: 4px;
+  background: var(--color-sidebar-muted);
+  border-radius: 2px;
+  position: relative;
+}
+.range-track-active {
+  position: absolute;
+  height: 100%;
+  background: var(--color-sidebar-active);
+  border-radius: 2px;
 }

@@ -1,101 +1,63 @@
-// Mock-Daten basierend auf dem bestehenden Backend (VDV 452 Fahrplandaten)
+// Transit Planner OS - Mock Data
 
-export const dbStats = {
-  tables: [
-    { name: "rec_lid", rows: 142, description: "Linien" },
-    { name: "lid_verlauf", rows: 3847, description: "Linienverlauf" },
-    { name: "rec_frt", rows: 18934, description: "Fahrten" },
-    { name: "sel_fzt_feld", rows: 52103, description: "Fahrzeitfelder" },
-    { name: "rec_hp", rows: 487, description: "Haltepunkte" },
-    { name: "rec_om", rows: 312, description: "Ortspunkte" },
-    { name: "ort_hztf", rows: 1203, description: "Haltezeiten" },
-    { name: "firmenkalender", rows: 365, description: "Kalender" },
-    { name: "rec_ueb", rows: 89, description: "Umlaeufe" },
-  ],
-  totalRows: 77482,
-  totalTables: 9,
-  dbSize: "24.8 MB",
-  lastImport: "2025-12-15 14:32:00",
+export const kpiData = {
+  totalDailyTrips: 1247,
+  revenueKilometers: 18432,
+  avgCommercialSpeed: 21.6,
+  criticalLayovers: 23,
 }
 
-export const volumeData = [
-  { name: "rec_lid", fahrten: 142, verlauf: 820 },
-  { name: "Linie 1", fahrten: 234, verlauf: 1240 },
-  { name: "Linie 2", fahrten: 187, verlauf: 980 },
-  { name: "Linie 3", fahrten: 312, verlauf: 1650 },
-  { name: "Linie 4", fahrten: 156, verlauf: 890 },
-  { name: "Linie 5", fahrten: 278, verlauf: 1420 },
-  { name: "Linie 6", fahrten: 198, verlauf: 1100 },
-  { name: "Linie 7", fahrten: 145, verlauf: 760 },
+export const allLines = [
+  "Linie 1", "Linie 2", "Linie 3", "Linie 4", "Linie 5",
+  "Linie 6", "Linie 7", "Linie 8", "Linie 10", "Linie 12",
 ]
 
-export const timeData = [
-  { stunde: "05:00", fahrten: 12 },
-  { stunde: "06:00", fahrten: 45 },
-  { stunde: "07:00", fahrten: 89 },
-  { stunde: "08:00", fahrten: 78 },
-  { stunde: "09:00", fahrten: 52 },
-  { stunde: "10:00", fahrten: 38 },
-  { stunde: "11:00", fahrten: 35 },
-  { stunde: "12:00", fahrten: 42 },
-  { stunde: "13:00", fahrten: 48 },
-  { stunde: "14:00", fahrten: 55 },
-  { stunde: "15:00", fahrten: 72 },
-  { stunde: "16:00", fahrten: 85 },
-  { stunde: "17:00", fahrten: 92 },
-  { stunde: "18:00", fahrten: 68 },
-  { stunde: "19:00", fahrten: 42 },
-  { stunde: "20:00", fahrten: 28 },
-  { stunde: "21:00", fahrten: 18 },
-  { stunde: "22:00", fahrten: 12 },
-  { stunde: "23:00", fahrten: 6 },
+export const frequencySpeedData = [
+  { hour: "05", departures: 18, speed: 24.2 },
+  { hour: "06", departures: 52, speed: 22.8 },
+  { hour: "07", departures: 94, speed: 18.3 },
+  { hour: "08", departures: 86, speed: 17.9 },
+  { hour: "09", departures: 58, speed: 20.5 },
+  { hour: "10", departures: 42, speed: 22.1 },
+  { hour: "11", departures: 40, speed: 22.4 },
+  { hour: "12", departures: 48, speed: 21.2 },
+  { hour: "13", departures: 52, speed: 21.0 },
+  { hour: "14", departures: 56, speed: 20.8 },
+  { hour: "15", departures: 68, speed: 19.6 },
+  { hour: "16", departures: 88, speed: 18.1 },
+  { hour: "17", departures: 96, speed: 17.4 },
+  { hour: "18", departures: 78, speed: 19.2 },
+  { hour: "19", departures: 52, speed: 21.8 },
+  { hour: "20", departures: 34, speed: 23.5 },
+  { hour: "21", departures: 22, speed: 24.1 },
+  { hour: "22", departures: 14, speed: 25.0 },
+  { hour: "23", departures: 8, speed: 25.8 },
 ]
 
-export const infraData = [
-  { name: "Haltestellen", count: 487 },
-  { name: "Linien", count: 142 },
-  { name: "Umlaeufe", count: 89 },
-  { name: "Ortspunkte", count: 312 },
-  { name: "Fahrzeitfelder", count: 52103 },
+export const routeComplexityData = [
+  { name: "Standardrouten", value: 64, fill: "var(--color-chart-blue)" },
+  { name: "Varianten", value: 36, fill: "var(--color-chart-sky)" },
 ]
 
-export const tableColumns: Record<string, string[]> = {
-  rec_lid: ["LI_NR", "ROESSION_NR", "LI_KUERZEL", "LIDNAME", "LI_RI_NR"],
-  lid_verlauf: ["LI_NR", "LI_RI_NR", "LI_LFD_NR", "ORT_NR", "HP_HZT"],
-  rec_frt: ["FRT_FID", "FRT_START", "FRT_HP_AUS", "LI_NR", "FGR_NR", "TAGESART_NR"],
-  rec_hp: ["ORT_NR", "HP_BEZEICHNUNG", "HP_KUERZEL", "HP_X", "HP_Y"],
-  rec_om: ["ORT_NR", "ORT_NAME", "ORT_POS_BREITE", "ORT_POS_LAENGE"],
-}
-
-export const sampleTableData: Record<string, Record<string, string | number>[]> = {
-  rec_lid: [
-    { LI_NR: 1, ROESSION_NR: 1, LI_KUERZEL: "1", LIDNAME: "Hauptbahnhof - Mattenhof", LI_RI_NR: 1 },
-    { LI_NR: 1, ROESSION_NR: 1, LI_KUERZEL: "1", LIDNAME: "Mattenhof - Hauptbahnhof", LI_RI_NR: 2 },
-    { LI_NR: 2, ROESSION_NR: 1, LI_KUERZEL: "2", LIDNAME: "Obernau - Kriens", LI_RI_NR: 1 },
-    { LI_NR: 2, ROESSION_NR: 1, LI_KUERZEL: "2", LIDNAME: "Kriens - Obernau", LI_RI_NR: 2 },
-    { LI_NR: 3, ROESSION_NR: 1, LI_KUERZEL: "3", LIDNAME: "Littau - Verkehrshaus", LI_RI_NR: 1 },
-    { LI_NR: 3, ROESSION_NR: 1, LI_KUERZEL: "3", LIDNAME: "Verkehrshaus - Littau", LI_RI_NR: 2 },
-    { LI_NR: 4, ROESSION_NR: 1, LI_KUERZEL: "4", LIDNAME: "Hubelmatt - Bruecke", LI_RI_NR: 1 },
-    { LI_NR: 5, ROESSION_NR: 1, LI_KUERZEL: "5", LIDNAME: "Emmenbruecke - Luzern", LI_RI_NR: 1 },
-  ],
-  rec_hp: [
-    { ORT_NR: 101, HP_BEZEICHNUNG: "Hauptbahnhof", HP_KUERZEL: "HB", HP_X: 2666180, HP_Y: 1211780 },
-    { ORT_NR: 102, HP_BEZEICHNUNG: "Kantonalbank", HP_KUERZEL: "KB", HP_X: 2666350, HP_Y: 1211920 },
-    { ORT_NR: 103, HP_BEZEICHNUNG: "Pilatusplatz", HP_KUERZEL: "PP", HP_X: 2665890, HP_Y: 1211450 },
-    { ORT_NR: 104, HP_BEZEICHNUNG: "Bruecke/Verkehrshaus", HP_KUERZEL: "BV", HP_X: 2667120, HP_Y: 1211150 },
-    { ORT_NR: 105, HP_BEZEICHNUNG: "Mattenhof", HP_KUERZEL: "MH", HP_X: 2665200, HP_Y: 1210800 },
-    { ORT_NR: 106, HP_BEZEICHNUNG: "Kriens Busschleife", HP_KUERZEL: "KBS", HP_X: 2664800, HP_Y: 1210200 },
-  ],
-}
-
-export const aiChatHistory = [
-  {
-    role: "user" as const,
-    message: "Wie viele Fahrten gibt es auf Linie 1?",
-  },
-  {
-    role: "assistant" as const,
-    message: "Auf Linie 1 gibt es insgesamt 234 Fahrten in beide Richtungen. Davon sind 118 in Richtung Mattenhof und 116 in Richtung Hauptbahnhof.",
-    sql: "SELECT COUNT(*) FROM rec_frt WHERE LI_NR = 1;",
-  },
+export const linePerformanceData = [
+  { lineId: "1", direction: "Mattenhof - HB", totalTrips: 118, maxLoad: 312, minLoad: 24, avgTravelTime: "22 min" },
+  { lineId: "1", direction: "HB - Mattenhof", totalTrips: 116, maxLoad: 298, minLoad: 18, avgTravelTime: "24 min" },
+  { lineId: "2", direction: "Obernau - Kriens", totalTrips: 94, maxLoad: 245, minLoad: 32, avgTravelTime: "18 min" },
+  { lineId: "2", direction: "Kriens - Obernau", totalTrips: 93, maxLoad: 228, minLoad: 28, avgTravelTime: "19 min" },
+  { lineId: "3", direction: "Littau - Verkehrshaus", totalTrips: 156, maxLoad: 387, minLoad: 45, avgTravelTime: "31 min" },
+  { lineId: "3", direction: "Verkehrshaus - Littau", totalTrips: 154, maxLoad: 372, minLoad: 38, avgTravelTime: "33 min" },
+  { lineId: "4", direction: "Hubelmatt - Bruecke", totalTrips: 78, maxLoad: 198, minLoad: 12, avgTravelTime: "15 min" },
+  { lineId: "4", direction: "Bruecke - Hubelmatt", totalTrips: 76, maxLoad: 185, minLoad: 15, avgTravelTime: "16 min" },
+  { lineId: "5", direction: "Emmenbruecke - HB", totalTrips: 134, maxLoad: 356, minLoad: 52, avgTravelTime: "26 min" },
+  { lineId: "5", direction: "HB - Emmenbruecke", totalTrips: 132, maxLoad: 341, minLoad: 48, avgTravelTime: "27 min" },
+  { lineId: "6", direction: "Adligenswil - HB", totalTrips: 98, maxLoad: 267, minLoad: 22, avgTravelTime: "20 min" },
+  { lineId: "6", direction: "HB - Adligenswil", totalTrips: 96, maxLoad: 254, minLoad: 19, avgTravelTime: "21 min" },
+  { lineId: "7", direction: "Reussbuehl - Wuerzenbach", totalTrips: 72, maxLoad: 178, minLoad: 14, avgTravelTime: "28 min" },
+  { lineId: "7", direction: "Wuerzenbach - Reussbuehl", totalTrips: 70, maxLoad: 165, minLoad: 11, avgTravelTime: "29 min" },
+  { lineId: "8", direction: "Hirtenhof - Ruopigen", totalTrips: 64, maxLoad: 142, minLoad: 8, avgTravelTime: "17 min" },
+  { lineId: "8", direction: "Ruopigen - Hirtenhof", totalTrips: 62, maxLoad: 136, minLoad: 10, avgTravelTime: "18 min" },
+  { lineId: "10", direction: "Obergutsch - Bueholz", totalTrips: 88, maxLoad: 223, minLoad: 26, avgTravelTime: "35 min" },
+  { lineId: "10", direction: "Bueholz - Obergutsch", totalTrips: 86, maxLoad: 215, minLoad: 21, avgTravelTime: "36 min" },
+  { lineId: "12", direction: "Zentrum - Spital", totalTrips: 52, maxLoad: 145, minLoad: 16, avgTravelTime: "12 min" },
+  { lineId: "12", direction: "Spital - Zentrum", totalTrips: 50, maxLoad: 138, minLoad: 13, avgTravelTime: "13 min" },
 ]
