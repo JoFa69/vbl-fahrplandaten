@@ -1,70 +1,78 @@
 import { Bus, Route, Gauge, AlertTriangle } from "lucide-react"
-import { Sidebar } from "@/components/sidebar"
+import { NavRail } from "@/components/nav-rail"
+import { FilterSidebar } from "@/components/sidebar"
+import { AiSearchBar } from "@/components/ai-search-bar"
 import { KpiCard } from "@/components/kpi-card"
+import { TransitMap } from "@/components/transit-map"
 import { FrequencySpeedChart } from "@/components/charts/frequency-speed-chart"
-import { RouteComplexityChart } from "@/components/charts/route-complexity-chart"
-import { PerformanceTable } from "@/components/performance-table"
+import { SanityTable } from "@/components/sanity-table"
+import { AiFab } from "@/components/ai-fab"
 import { kpiData } from "@/lib/mock-data"
 
 export default function DashboardPage() {
   return (
     <div className="flex min-h-screen">
-      <Sidebar />
+      {/* Primary Icon Rail */}
+      <NavRail />
+
+      {/* Contextual Filter Sidebar */}
+      <FilterSidebar />
 
       {/* Main Content */}
-      <main className="flex-1 ml-[260px] p-8 overflow-y-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-xl font-bold text-foreground tracking-tight text-balance">
-            Transit Network Dashboard
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Betriebskennzahlen und Netzwerkanalyse - VBL Luzern
-          </p>
+      <main className="flex-1 ml-[calc(4rem+250px)] p-6 overflow-y-auto">
+        {/* AI Search Bar */}
+        <div className="mb-6">
+          <AiSearchBar />
         </div>
 
         {/* KPI Row */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
           <KpiCard
-            title="Tagesfahrten"
+            title="Total Daily Trips"
             value={kpiData.totalDailyTrips}
-            subtitle="Total Daily Trips"
+            subtitle="Tagesfahrten Werktag"
             icon={Bus}
+            trend="+3.2%"
           />
           <KpiCard
-            title="Nutzwagenkilometer"
-            value={kpiData.revenueKilometers.toLocaleString("de-CH")}
-            subtitle="Revenue Kilometers (NWKM)"
+            title="Revenue Kilometers"
+            value={kpiData.revenueKilometers.toLocaleString("de-CH") + " km"}
+            subtitle="Nutzwagenkilometer (NWKM)"
             icon={Route}
+            trend="+1.8%"
           />
           <KpiCard
-            title="Reisegeschwindigkeit"
+            title="Avg Commercial Speed"
             value={`${kpiData.avgCommercialSpeed} km/h`}
-            subtitle="Avg Commercial Speed"
+            subtitle="Reisegeschwindigkeit"
             icon={Gauge}
+            trend="-0.4%"
           />
           <KpiCard
-            title="Kritische Wendezeiten"
+            title="Critical Layovers"
             value={kpiData.criticalLayovers}
-            subtitle={"< 5 Min. Wendezeit"}
+            subtitle={"Wendezeiten < 5 Min."}
             icon={AlertTriangle}
             variant="warning"
           />
         </div>
 
-        {/* Charts Row - 60/40 */}
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-5 mb-6">
+        {/* Map + Chart Row - 70/30 */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-10 mb-6">
+          <div className="lg:col-span-7">
+            <TransitMap />
+          </div>
           <div className="lg:col-span-3">
             <FrequencySpeedChart />
           </div>
-          <div className="lg:col-span-2">
-            <RouteComplexityChart />
-          </div>
         </div>
 
-        {/* Table Row */}
-        <PerformanceTable />
+        {/* Sanity Table */}
+        <SanityTable />
       </main>
+
+      {/* Floating AI Button */}
+      <AiFab />
     </div>
   )
 }

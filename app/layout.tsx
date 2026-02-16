@@ -7,11 +7,11 @@ const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jet
 
 export const metadata: Metadata = {
   title: "Transit Planner OS",
-  description: "Public Transit Network Planning Dashboard",
+  description: "Public Transit Network Planning Dashboard - VBL Luzern",
 }
 
 export const viewport: Viewport = {
-  themeColor: "#f8fafc",
+  themeColor: "#f1f5f9",
 }
 
 export default function RootLayout({
