@@ -293,10 +293,10 @@ const GeometryMap = ({ selectedLine, selectedVariant, showAllStops = false, onLi
                                     <CircleMarker
                                         key={`allstop-${i}`}
                                         center={[stop.lat, stop.lon]}
-                                        radius={4}
+                                        radius={6}
                                         fillColor="#10b981"
                                         color="#fff"
-                                        weight={1}
+                                        weight={2}
                                         fillOpacity={0.8}
                                     >
                                         <Popup>
@@ -307,7 +307,7 @@ const GeometryMap = ({ selectedLine, selectedVariant, showAllStops = false, onLi
                                             </div>
                                         </Popup>
                                         {showStopNames && (
-                                            <Tooltip permanent direction="right" className="bg-white/80 border-slate-300 shadow-sm text-slate-800 font-bold text-[10px] px-1 py-0.5 mt-0 leading-tight">
+                                            <Tooltip permanent direction="right" offset={[12, 0]} className="bg-white/80 border-slate-300 shadow-sm text-slate-800 font-bold text-[10px] px-1 py-0.5 mt-0 leading-tight">
                                                 {stop.stop_point_text || stop.name}
                                             </Tooltip>
                                         )}
@@ -319,10 +319,10 @@ const GeometryMap = ({ selectedLine, selectedVariant, showAllStops = false, onLi
                                     <CircleMarker
                                         key={`st-${stop.id}-${i}`}
                                         center={[stop.lat, stop.lon]}
-                                        radius={4}
+                                        radius={6}
                                         fillColor="#10b981"
                                         color="#fff"
-                                        weight={1}
+                                        weight={2}
                                         fillOpacity={0.8}
                                     >
                                         <Popup>
@@ -335,7 +335,7 @@ const GeometryMap = ({ selectedLine, selectedVariant, showAllStops = false, onLi
                                             </div>
                                         </Popup>
                                         {showStopNames && (
-                                            <Tooltip permanent direction="right" className="bg-white/80 border-slate-300 shadow-sm text-slate-800 font-bold text-[10px] px-1 py-0.5 mt-0 leading-tight">
+                                            <Tooltip permanent direction="right" offset={[12, 0]} className="bg-white/80 border-slate-300 shadow-sm text-slate-800 font-bold text-[10px] px-1 py-0.5 mt-0 leading-tight">
                                                 {stop.stop_point_text || stop.name}
                                             </Tooltip>
                                         )}
