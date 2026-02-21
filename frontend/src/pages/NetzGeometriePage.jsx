@@ -701,14 +701,14 @@ export default function NetzGeometriePage() {
                                     <div className="flex-1 flex items-center justify-center"><span className="material-symbols-outlined animate-spin text-primary text-3xl">progress_activity</span></div>
                                 ) : matrixData && matrixData.matrix.length > 0 ? (
                                     <div className="flex-1 min-h-0 overflow-auto bg-[#0a0c10] custom-scrollbar p-0 relative">
-                                        <table className="w-full text-left border-collapse" style={{ minWidth: `${matrixData.columns.length * 36 + 120}px` }}>
+                                        <table className="w-full text-left border-collapse" style={{ minWidth: `${matrixData.columns.length * 36 + 80}px` }}>
                                             <thead>
                                                 <tr>
-                                                    <th className="sticky top-0 left-0 bg-[#0a0c10] z-30 px-3 py-2 text-sm font-semibold text-slate-400 border-b border-r border-slate-800 min-w-[70px] max-w-[80px] shadow-sm">
+                                                    <th className="sticky top-0 left-0 bg-[#0a0c10] z-30 px-3 py-2 text-sm font-semibold text-slate-400 border-b border-r border-slate-800 w-[80px] min-w-[80px] max-w-[80px] shadow-sm">
                                                         Variante
                                                     </th>
                                                     {matrixData.columns.map(col => (
-                                                        <th key={col.id} className="sticky top-0 px-0 py-0 border-b border-slate-800 bg-[#0a0c10] z-20 w-[36px] h-[120px] align-bottom shadow-sm">
+                                                        <th key={col.id} className="sticky top-0 px-0 py-0 border-b border-slate-800 bg-[#0a0c10] z-20 w-[36px] h-[160px] align-bottom shadow-sm">
                                                             <div className="relative w-full h-full flex items-end justify-center pb-2">
                                                                 <span className="absolute whitespace-nowrap text-[11px] font-medium tracking-wide text-slate-400 hover:text-white hover:z-40 cursor-default transition-colors"
                                                                     style={{ left: '50%', bottom: 4, transformOrigin: '0% 100%', transform: 'rotate(-55deg)' }}>
@@ -730,7 +730,7 @@ export default function NetzGeometriePage() {
                                                             className={`transition-colors cursor-pointer ${isSelected ? 'bg-slate-800/80' : 'hover:bg-slate-900/80'}`}
                                                             onClick={() => handleVariantClick({ id: row.id, variant_no: row.id, stop_count: row.stops.length, route_info: 'Ausgewählt' })}
                                                         >
-                                                            <td className={`sticky left-0 ${isSelected ? 'bg-slate-800' : 'bg-[#0a0c10]'} z-20 px-3 py-2 border-b border-r border-slate-800 transition-colors`}>
+                                                            <td className={`sticky left-0 ${isSelected ? 'bg-slate-800' : 'bg-[#0a0c10]'} z-20 px-3 py-2 border-b border-r border-slate-800 transition-colors w-[80px] min-w-[80px] max-w-[80px]`}>
                                                                 <div className="flex items-center gap-2">
                                                                     <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }}></div>
                                                                     <div className="flex flex-col">
