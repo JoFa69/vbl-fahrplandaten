@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Stops Infrastructure - VDV 452 Analytics</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101622",
+                        "surface-dark": "#1c2433",
+                        "surface-lighter": "#283042",
+                        "border-dark": "#2d3748",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar for dark mode */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #101622;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #2d3748;
+            border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #4a5568;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-display overflow-hidden h-screen flex">
+<!-- Sidebar -->
+<aside class="w-64 bg-background-dark border-r border-border-dark flex flex-col shrink-0 z-20">
+<div class="flex flex-col h-full p-4 justify-between">
+<div class="flex flex-col gap-6">
+<!-- App Header -->
+<div class="flex gap-3 items-center px-2">
+<div class="bg-primary/20 flex items-center justify-center aspect-square rounded-full size-10">
+<span class="material-symbols-outlined text-primary">directions_transit</span>
+</div>
+<div class="flex flex-col">
+<h1 class="text-white text-base font-medium leading-normal">VDV 452 Analytics</h1>
+<p class="text-slate-400 text-xs font-normal leading-normal">Enterprise Edition</p>
+</div>
+</div>
+<!-- Navigation -->
+<div class="flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-surface-dark group transition-colors" href="#">
+<span class="material-symbols-outlined text-slate-400 group-hover:text-white">donut_large</span>
+<p class="text-slate-300 group-hover:text-white text-sm font-medium">Dashboard</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-surface-dark group transition-colors" href="#">
+<span class="material-symbols-outlined text-slate-400 group-hover:text-white">hub</span>
+<p class="text-slate-300 group-hover:text-white text-sm font-medium">Network</p>
+</a>
+<!-- Active State -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/20 border border-primary/20" href="#">
+<span class="material-symbols-outlined text-primary fill-1">location_on</span>
+<p class="text-white text-sm font-medium">Stops</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-surface-dark group transition-colors" href="#">
+<span class="material-symbols-outlined text-slate-400 group-hover:text-white">directions_bus</span>
+<p class="text-slate-300 group-hover:text-white text-sm font-medium">Vehicles</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-surface-dark group transition-colors" href="#">
+<span class="material-symbols-outlined text-slate-400 group-hover:text-white">bar_chart</span>
+<p class="text-slate-300 group-hover:text-white text-sm font-medium">Analytics</p>
+</a>
+</div>
+</div>
+<div class="flex flex-col gap-2">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-surface-dark group transition-colors" href="#">
+<span class="material-symbols-outlined text-slate-400 group-hover:text-white">settings</span>
+<p class="text-slate-300 group-hover:text-white text-sm font-medium">Settings</p>
+</a>
+<div class="h-px bg-border-dark my-1"></div>
+<div class="flex items-center gap-3 px-3 py-2">
+<div class="w-8 h-8 rounded-full bg-surface-lighter flex items-center justify-center text-xs font-bold text-slate-300">
+                        JD
+                    </div>
+<div class="flex flex-col">
+<p class="text-white text-sm font-medium">Jane Doe</p>
+<p class="text-slate-500 text-xs">Admin</p>
+</div>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col min-w-0 bg-background-dark relative">
+<!-- Top Bar -->
+<header class="h-16 border-b border-border-dark flex items-center justify-between px-6 shrink-0 bg-background-dark z-10">
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 text-sm">
+<span class="text-slate-400">Infrastructure</span>
+<span class="text-slate-600">/</span>
+<span class="text-white font-medium">Stops</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative group">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-slate-400 text-[20px]">search</span>
+</div>
+<input class="bg-surface-dark border border-border-dark text-slate-200 text-sm rounded-lg focus:ring-primary focus:border-primary block w-64 pl-10 p-2 placeholder-slate-500 transition-colors" placeholder="Search stops..." type="text"/>
+</div>
+<button class="text-slate-400 hover:text-white transition-colors relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-0 right-0 h-2 w-2 rounded-full bg-red-500 border border-background-dark"></span>
+</button>
+</div>
+</header>
+<!-- Content Container (Split View) -->
+<div class="flex flex-1 overflow-hidden relative">
+<!-- Left: Table Area -->
+<div class="flex-1 flex flex-col min-w-0 custom-scrollbar overflow-y-auto p-6">
+<div class="flex items-center justify-between mb-6">
+<h2 class="text-2xl font-bold text-white tracking-tight">Stops Infrastructure</h2>
+<div class="flex gap-2">
+<button class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-300 bg-surface-dark border border-border-dark rounded-md hover:bg-surface-lighter transition-colors">
+<span class="material-symbols-outlined text-[18px]">filter_list</span>
+                            Filter
+                        </button>
+<button class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-primary rounded-md hover:bg-blue-600 transition-colors shadow-lg shadow-blue-900/20">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                            Add Stop
+                        </button>
+</div>
+</div>
+<!-- Data Table -->
+<div class="bg-surface-dark rounded-lg border border-border-dark overflow-hidden shadow-xl">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-border-dark bg-surface-lighter/50">
+<th class="py-3 px-4 text-xs font-semibold uppercase tracking-wider text-slate-400 w-32">Stop ID</th>
+<th class="py-3 px-4 text-xs font-semibold uppercase tracking-wider text-slate-400">Stop Name</th>
+<th class="py-3 px-4 text-xs font-semibold uppercase tracking-wider text-slate-400 w-48">Frequency (Peak)</th>
+<th class="py-3 px-4 text-xs font-semibold uppercase tracking-wider text-slate-400">Crossing Lines</th>
+<th class="py-3 px-4 text-xs font-semibold uppercase tracking-wider text-slate-400 w-32">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-border-dark text-sm">
+<!-- Selected Row -->
+<tr class="bg-primary/10 border-l-4 border-l-primary hover:bg-surface-lighter/50 transition-colors cursor-pointer group">
+<td class="py-3 px-4 font-mono text-slate-400 group-hover:text-white">452-901</td>
+<td class="py-3 px-4 font-medium text-white">Central Station / Platform 4</td>
+<td class="py-3 px-4">
+<div class="flex items-center gap-3">
+<div class="h-1.5 w-24 bg-slate-700 rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[95%]"></div>
+</div>
+<span class="text-xs font-mono text-slate-400">120/h</span>
+</div>
+</td>
+<td class="py-3 px-4">
+<div class="flex flex-wrap gap-1.5">
+<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-900 text-blue-200 border border-blue-800">U1</span>
+<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-orange-900 text-orange-200 border border-orange-800">U3</span>
+<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-700 text-slate-300 border border-slate-600">Bus 42</span>
+</div>
+</td>
+<td class="py-3 px-4">
+<div class="flex items-center gap-2">
+<span class="h-2 w-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]"></span>
+<span class="text-slate-300 text-xs">Operational</span>
+</div>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-lighter/30 transition-colors cursor-pointer group border-l-4 border-l-transparent">
+<td class="py-3 px-4 font-mono text-slate-500 group-hover:text-slate-300">452-902</td>
+<td class="py-3 px-4 font-medium text-slate-300 group-hover:text-white">North Avenue</td>
+<td class="py-3 px-4">
+<div class="flex items-center gap-3">
+<div class="h-1.5 w-24 bg-slate-700 rounded-full overflow-hidden">
+<div class="h-full bg-slate-500 w-[60%]"></div>
+</div>
+<span class="text-xs font-mono text-slate-500">60/h</span>
+</div>
+</td>
+<td class="py-3 px-4">
+<div class="flex flex-wrap gap-1.5">
+<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-700 text-slate-300 border border-slate-600">Bus 12</span>
+<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-700 text-slate-300 border border-slate-600">Bus 14</span>
+</div>
+</td>
+<td class="py-3 px-4">
+<div class="flex items-center gap-2">
+<span class="h-2 w-2 rounded-full bg-amber-500"></span>
+<span class="text-slate-300 text-xs">Maintenance</span>
+</div>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-lighter/30 transition-colors cursor-pointer group border-l-4 border-l-transparent">
+<td class="py-3 px-4 font-mono text-slate-500 group-hover:text-slate-300">452-903</td>
+<td class="py-3 px-4 font-medium text-slate-300 group-hover:text-white">Market Square</td>
+<td class="py-3 px-4">
+<div class="flex items-center gap-3">
+<div class="h-1.5 w-24 bg-slate-700 rounded-full overflow-hidden">
+<div class="h-full bg-slate-500 w-[80%]"></div>
+</div>
+<span class="text-xs font-mono text-slate-500">80/h</span>
+</div>
+</td>
+<td class="py-3 px-4">
+<div class="flex flex-wrap gap-1.5">
+<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-900 text-purple-200 border border-purple-800">Tram 5</span>
+<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-900 text-purple-200 border border-purple-800">Tram 9</span>
+</div>
+</td>
+<td class="py-3 px-4">
+<div class="flex items-center gap-2">
+<span class="h-2 w-2 rounded-full bg-green-500"></span>
+<span class="text-slate-300 text-xs">Operational</span>
+</div>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-surface-lighter/30 transition-colors cursor-pointer group border-l-4 border-l-transparent">
+<td class="py-3 px-4 font-mono text-slate-500 group-hover:text-slate-300">452-904</td>
+<td class="py-3 px-4 font-medium text-slate-300 group-hover:text-white">West Harbor</td>
+<td class="py-3 px-4">
+<div class="flex items-center gap-3">
+<div class="h-1.5 w-24 bg-slate-700 rounded-full overflow-hidden">
+<div class="h-full bg-slate-500 w-[45%]"></div>
+</div>
+<span class="text-xs font-mono text-slate-500">45/h</span>
+</div>
+</td>
+<td class="py-3 px-4">
+<div class="flex flex-wrap gap-1.5">
+<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-teal-900 text-teal-200 border border-teal-800">Ferry 1</span>
+</div>
+</td>
+<td class="py-3 px-4">
+<div class="flex items-center gap-2">
+<span class="h-2 w-2 rounded-full bg-red-500"></span>
+<span class="text-slate-300 text-xs">Limited</span>
+</div>
+</td>
+</tr>
+<!-- Row 5 -->
+<tr class="hover:bg-surface-lighter/30 transition-colors cursor-pointer group border-l-4 border-l-transparent">
+<td class="py-3 px-4 font-mono text-slate-500 group-hover:text-slate-300">452-905</td>
+<td class="py-3 px-4 font-medium text-slate-300 group-hover:text-white">University Park</td>
+<td class="py-3 px-4">
+<div class="flex items-center gap-3">
+<div class="h-1.5 w-24 bg-slate-700 rounded-full overflow-hidden">
+<div class="h-full bg-slate-500 w-[75%]"></div>
+</div>
+<span class="text-xs font-mono text-slate-500">75/h</span>
+</div>
+</td>
+<td class="py-3 px-4">
+<div class="flex flex-wrap gap-1.5">
+<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-900 text-blue-200 border border-blue-800">U2</span>
+<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-700 text-slate-300 border border-slate-600">Bus 20</span>
+</div>
+</td>
+<td class="py-3 px-4">
+<div class="flex items-center gap-2">
+<span class="h-2 w-2 rounded-full bg-green-500"></span>
+<span class="text-slate-300 text-xs">Operational</span>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="mt-4 flex items-center justify-between text-xs text-slate-500 px-2">
+<p>Showing 1-5 of 842 stops</p>
+<div class="flex gap-2">
+<button class="px-2 py-1 rounded bg-surface-dark border border-border-dark hover:text-white disabled:opacity-50" disabled="">Previous</button>
+<button class="px-2 py-1 rounded bg-surface-dark border border-border-dark hover:text-white">Next</button>
+</div>
+</div>
+</div>
+<!-- Right: Detail Panel Slide-over -->
+<aside class="w-[420px] bg-surface-dark border-l border-border-dark shadow-2xl flex flex-col shrink-0 transform transition-transform duration-300 z-10">
+<!-- Panel Header -->
+<div class="p-6 border-b border-border-dark flex justify-between items-start bg-surface-lighter/30">
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-2 mb-1">
+<h2 class="text-xl font-bold text-white">Central Station</h2>
+<span class="px-1.5 py-0.5 rounded bg-green-500/10 border border-green-500/20 text-green-500 text-[10px] font-bold uppercase">Operational</span>
+</div>
+<p class="text-slate-400 text-sm font-mono flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-slate-500">tag</span>
+                            ID: 452-901
+                        </p>
+<p class="text-slate-400 text-sm flex items-center gap-1 mt-1">
+<span class="material-symbols-outlined text-[16px] text-slate-500">location_on</span>
+                            Platform 4, Main Concourse
+                        </p>
+</div>
+<div class="flex gap-2">
+<button class="text-slate-400 hover:text-white p-1 rounded-md hover:bg-surface-lighter transition-colors">
+<span class="material-symbols-outlined">edit</span>
+</button>
+<button class="text-slate-400 hover:text-white p-1 rounded-md hover:bg-surface-lighter transition-colors">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+</div>
+<!-- Panel Content -->
+<div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-8">
+<!-- Live Departures Monitor -->
+<div class="space-y-3">
+<div class="flex items-center justify-between">
+<h3 class="text-sm font-semibold text-slate-200 uppercase tracking-wider">Live Departures</h3>
+<span class="flex items-center gap-1.5 text-[10px] text-primary font-bold bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+</span>
+                                LIVE FEED
+                            </span>
+</div>
+<div class="bg-black/40 rounded-lg p-3 border border-slate-700 font-mono shadow-inner">
+<div class="flex flex-col gap-2">
+<!-- Departure Item -->
+<div class="flex items-center justify-between border-b border-slate-800 pb-2">
+<div class="flex items-center gap-3">
+<span class="text-blue-400 font-bold w-6">U1</span>
+<span class="text-slate-200 text-sm truncate w-32">Northbound</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-green-400 text-sm font-bold animate-pulse">2 min</span>
+</div>
+</div>
+<!-- Departure Item -->
+<div class="flex items-center justify-between border-b border-slate-800 pb-2">
+<div class="flex items-center gap-3">
+<span class="text-orange-400 font-bold w-6">U3</span>
+<span class="text-slate-200 text-sm truncate w-32">West End</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-slate-300 text-sm">5 min</span>
+</div>
+</div>
+<!-- Departure Item -->
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<span class="text-slate-400 font-bold w-6">B42</span>
+<span class="text-slate-200 text-sm truncate w-32">Airport</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-slate-300 text-sm">8 min</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Accessibility Status -->
+<div class="space-y-3">
+<h3 class="text-sm font-semibold text-slate-200 uppercase tracking-wider">Accessibility</h3>
+<div class="grid grid-cols-2 gap-3">
+<div class="bg-surface-lighter/50 p-3 rounded-lg border border-border-dark flex items-start gap-3">
+<span class="material-symbols-outlined text-green-500 mt-0.5">accessible</span>
+<div>
+<p class="text-xs text-slate-400 font-medium uppercase">Step-free</p>
+<p class="text-sm text-white font-medium">Available</p>
+</div>
+</div>
+<div class="bg-surface-lighter/50 p-3 rounded-lg border border-border-dark flex items-start gap-3">
+<span class="material-symbols-outlined text-amber-500 mt-0.5">blind</span>
+<div>
+<p class="text-xs text-slate-400 font-medium uppercase">Tactile Paving</p>
+<p class="text-sm text-white font-medium">Partial</p>
+</div>
+</div>
+<div class="bg-surface-lighter/50 p-3 rounded-lg border border-border-dark flex items-start gap-3 col-span-2">
+<span class="material-symbols-outlined text-slate-400 mt-0.5">elevator</span>
+<div class="flex-1">
+<div class="flex justify-between">
+<p class="text-xs text-slate-400 font-medium uppercase">Elevator E-102</p>
+<span class="text-[10px] text-green-500 bg-green-500/10 px-1.5 rounded border border-green-500/20">OK</span>
+</div>
+<p class="text-xs text-slate-500 mt-1">Last service: 2 days ago</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Stats / Mini Dashboard -->
+<div class="space-y-3">
+<h3 class="text-sm font-semibold text-slate-200 uppercase tracking-wider">Daily Metrics</h3>
+<div class="grid grid-cols-2 gap-3">
+<div class="bg-surface-lighter/50 p-4 rounded-lg border border-border-dark">
+<p class="text-xs text-slate-400 mb-1">Footfall (Today)</p>
+<p class="text-2xl font-bold text-white">24.5k</p>
+<div class="mt-2 text-xs text-green-400 flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">trending_up</span>
+                                    +12% vs avg
+                                </div>
+</div>
+<div class="bg-surface-lighter/50 p-4 rounded-lg border border-border-dark">
+<p class="text-xs text-slate-400 mb-1">Incidents</p>
+<p class="text-2xl font-bold text-white">0</p>
+<div class="mt-2 text-xs text-slate-500 flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">check_circle</span>
+                                    All clear
+                                </div>
+</div>
+</div>
+</div>
+<!-- Map Preview -->
+<div class="space-y-3">
+<h3 class="text-sm font-semibold text-slate-200 uppercase tracking-wider">Location Context</h3>
+<div class="aspect-video w-full rounded-lg bg-surface-lighter relative overflow-hidden group cursor-pointer border border-border-dark">
+<div class="absolute inset-0 bg-cover bg-center opacity-60 group-hover:opacity-80 transition-opacity" data-alt="Satellite map view of urban city grid at night with illuminated streets" data-location="Berlin" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuC10DS6rb6bPVy3WeMzu2jYveKu8KbHFp3a2E6J0_3FVgOXFAlZpQH2_dRkCPT7BC-V-jFMNR2zN8fFvrys6RKFlVdttG9dJPMHG98TjTBipk6YqNyTELKaeQbzSw3jenyghx-Cudbqn7km8p3R-msko_ikxbTfn6SIjtrwvCUfKTdswCGaxVXhkp_d-2n-QXBd0IHIP-sKCW2_PUOaJc4QxHBks5e2mQsRS2QcBFARO3xcyVzeqrldeeUQfkennwKGfDdPViD3yg');"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-background-dark/80 to-transparent"></div>
+<div class="absolute bottom-3 left-3 flex items-center gap-2">
+<div class="bg-primary text-white p-1.5 rounded shadow-lg">
+<span class="material-symbols-outlined text-[18px]">near_me</span>
+</div>
+<span class="text-xs font-mono text-slate-300 bg-black/50 px-2 py-1 rounded backdrop-blur-sm">52.5200° N, 13.4050° E</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Panel Footer -->
+<div class="p-4 border-t border-border-dark bg-surface-lighter/20">
+<button class="w-full py-2 px-4 bg-primary hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">settings_suggest</span>
+                        Manage Infrastructure
+                    </button>
+</div>
+</aside>
+</div>
+</main>
+</body></html>

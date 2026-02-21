@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Network &amp; Geometry - VDV 452 Analytics</title>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Theme Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec",
+                        "primary-dark": "#0b43b3",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#0f172a", // Deep charcoal/slate
+                        "surface-dark": "#1e293b", // Slightly lighter for cards/sidebars
+                        "border-dark": "#334155",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"],
+                        "body": ["Inter", "sans-serif"],
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar for dark mode */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+        
+        /* Map overlay glowing effect */
+        .glow-effect {
+            box-shadow: 0 0 15px rgba(19, 91, 236, 0.5);
+        }
+        
+        /* Map Placeholder Pattern */
+        .map-bg {
+            background-color: #0f172a;
+            background-image: 
+                linear-gradient(#1e293b 1px, transparent 1px),
+                linear-gradient(90deg, #1e293b 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-display h-screen flex overflow-hidden">
+<!-- Sidebar -->
+<aside class="w-64 bg-surface-dark border-r border-border-dark flex flex-col shrink-0 z-20">
+<!-- Brand -->
+<div class="p-6 border-b border-border-dark flex items-center gap-3">
+<div class="size-8 rounded-lg bg-primary flex items-center justify-center text-white shrink-0">
+<span class="material-symbols-outlined text-xl">analytics</span>
+</div>
+<div>
+<h1 class="text-sm font-semibold text-white leading-tight">VDV Analytics</h1>
+<p class="text-xs text-slate-400">Enterprise Edition</p>
+</div>
+</div>
+<!-- Navigation -->
+<nav class="flex-1 overflow-y-auto py-4 px-3 flex flex-col gap-1 custom-scrollbar">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">dashboard</span>
+<span class="text-sm font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/20 text-white transition-colors relative" href="#">
+<div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-primary rounded-r-full"></div>
+<span class="material-symbols-outlined text-primary">map</span>
+<span class="text-sm font-medium">Network &amp; Geometry</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">schedule</span>
+<span class="text-sm font-medium">Timetables</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">directions_bus</span>
+<span class="text-sm font-medium">Vehicles</span>
+</a>
+<div class="my-2 border-t border-border-dark/50"></div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">settings</span>
+<span class="text-sm font-medium">Settings</span>
+</a>
+</nav>
+<!-- User Profile -->
+<div class="p-4 border-t border-border-dark">
+<div class="flex items-center gap-3">
+<div class="size-9 rounded-full bg-slate-700 bg-cover bg-center border border-slate-600" data-alt="User profile picture" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBjsAS4oc3gQCIYcoE82ED76WzwEiM08E3e-EjwysF7HY_HYsw3qcT6bigzHv6wvXPfDsGVUd08OHo0c140MxnhwCb9taMoahx9-ZxR-JoS6kZVSFLEWIgvuolT6aITSMiMwwjTph3cU7S33E7zfD7K0pcq6K9YAPs7tO9f8mz7H9M0b8LsTKua4MgK4RD6lsYaxNJ3Fh-PIqKQzG66_DexDbuteaSajIcbSvw5AygxX_01FupA7NulamL7uyW-Nk_gcvJ4xgwbsA");'></div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-sm font-medium text-white truncate">Admin User</span>
+<span class="text-xs text-slate-400 truncate">admin@vdvanalytics.com</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col min-w-0 bg-background-dark">
+<!-- Top Bar -->
+<header class="h-16 border-b border-border-dark bg-background-dark/95 backdrop-blur flex items-center justify-between px-6 shrink-0 z-10">
+<div class="flex items-center gap-2">
+<span class="text-slate-400 text-sm">Network</span>
+<span class="text-slate-600 text-sm">/</span>
+<h2 class="text-slate-100 text-sm font-medium">Spatial View</h2>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 px-3 py-1.5 bg-slate-800 rounded-lg border border-slate-700">
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+<span class="text-xs text-slate-300 font-medium">System Online</span>
+</div>
+<button class="text-slate-400 hover:text-white transition-colors">
+<span class="material-symbols-outlined text-xl">notifications</span>
+</button>
+</div>
+</header>
+<!-- Split Layout Content -->
+<div class="flex flex-1 overflow-hidden">
+<!-- Left Panel: Data Table (40%) -->
+<div class="w-2/5 flex flex-col border-r border-border-dark bg-surface-dark min-w-[400px]">
+<!-- Filters & Controls -->
+<div class="p-4 border-b border-border-dark flex flex-col gap-4">
+<!-- Search -->
+<div class="relative w-full">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-slate-400 text-[20px]">search</span>
+</div>
+<input class="block w-full pl-10 pr-3 py-2.5 border-none rounded-lg leading-5 bg-slate-800 text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-primary sm:text-sm" placeholder="Search route, line, or stop ID..." type="text"/>
+</div>
+<!-- Quick Filters -->
+<div class="flex gap-2 overflow-x-auto pb-1 custom-scrollbar">
+<button class="flex items-center justify-center px-3 py-1.5 rounded bg-primary text-white text-xs font-medium border border-transparent whitespace-nowrap">
+                            All Lines
+                        </button>
+<button class="flex items-center justify-center px-3 py-1.5 rounded bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 text-xs font-medium border border-slate-700 whitespace-nowrap transition-colors">
+<span class="material-symbols-outlined text-[16px] mr-1.5">directions_bus</span> Bus
+                        </button>
+<button class="flex items-center justify-center px-3 py-1.5 rounded bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 text-xs font-medium border border-slate-700 whitespace-nowrap transition-colors">
+<span class="material-symbols-outlined text-[16px] mr-1.5">tram</span> Tram
+                        </button>
+<button class="flex items-center justify-center px-3 py-1.5 rounded bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 text-xs font-medium border border-slate-700 whitespace-nowrap transition-colors">
+<span class="material-symbols-outlined text-[16px] mr-1.5">subway</span> Metro
+                        </button>
+</div>
+</div>
+<!-- Table Container -->
+<div class="flex-1 overflow-y-auto custom-scrollbar">
+<table class="w-full text-left border-collapse">
+<thead class="bg-slate-800/50 sticky top-0 z-10 backdrop-blur-sm">
+<tr>
+<th class="px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700">Line</th>
+<th class="px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700">Var</th>
+<th class="px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700">Dir</th>
+<th class="px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700">Start / End</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-800">
+<!-- Selected Row -->
+<tr class="bg-primary/10 hover:bg-primary/20 transition-colors cursor-pointer group">
+<td class="px-4 py-3 whitespace-nowrap">
+<div class="flex items-center gap-2">
+<div class="h-6 w-1 bg-primary rounded-full"></div>
+<span class="px-2 py-1 rounded bg-slate-800 text-white text-xs font-bold border border-slate-600">10A</span>
+</div>
+</td>
+<td class="px-4 py-3 whitespace-nowrap text-sm text-slate-300">V1</td>
+<td class="px-4 py-3 whitespace-nowrap">
+<span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-medium border border-emerald-500/20">Outbound</span>
+</td>
+<td class="px-4 py-3 whitespace-nowrap">
+<div class="flex flex-col gap-0.5">
+<div class="flex items-center gap-1.5 text-xs text-white font-medium">
+<span class="w-1.5 h-1.5 rounded-full bg-slate-500"></span> Central St
+                                        </div>
+<div class="h-2 w-px bg-slate-700 ml-[3px]"></div>
+<div class="flex items-center gap-1.5 text-xs text-slate-400">
+<span class="w-1.5 h-1.5 rounded-full bg-primary shadow shadow-primary"></span> North Park
+                                        </div>
+</div>
+</td>
+</tr>
+<!-- Standard Row -->
+<tr class="hover:bg-slate-800/50 transition-colors cursor-pointer">
+<td class="px-4 py-3 whitespace-nowrap">
+<div class="flex items-center gap-2">
+<div class="h-6 w-1 bg-transparent rounded-full"></div>
+<span class="px-2 py-1 rounded bg-slate-800 text-slate-300 text-xs font-bold border border-slate-700">10A</span>
+</div>
+</td>
+<td class="px-4 py-3 whitespace-nowrap text-sm text-slate-400">V2</td>
+<td class="px-4 py-3 whitespace-nowrap">
+<span class="px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-400 text-[10px] font-medium border border-sky-500/20">Inbound</span>
+</td>
+<td class="px-4 py-3 whitespace-nowrap">
+<div class="flex flex-col gap-0.5">
+<span class="text-xs text-slate-300">North Park</span>
+<span class="text-xs text-slate-500">Central St</span>
+</div>
+</td>
+</tr>
+<!-- Standard Row -->
+<tr class="hover:bg-slate-800/50 transition-colors cursor-pointer">
+<td class="px-4 py-3 whitespace-nowrap">
+<div class="flex items-center gap-2">
+<div class="h-6 w-1 bg-transparent rounded-full"></div>
+<span class="px-2 py-1 rounded bg-slate-800 text-slate-300 text-xs font-bold border border-slate-700">Tram 3</span>
+</div>
+</td>
+<td class="px-4 py-3 whitespace-nowrap text-sm text-slate-400">V1</td>
+<td class="px-4 py-3 whitespace-nowrap">
+<span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-medium border border-emerald-500/20">Outbound</span>
+</td>
+<td class="px-4 py-3 whitespace-nowrap">
+<div class="flex flex-col gap-0.5">
+<span class="text-xs text-slate-300">Southgate</span>
+<span class="text-xs text-slate-500">Westfield</span>
+</div>
+</td>
+</tr>
+<!-- Standard Row -->
+<tr class="hover:bg-slate-800/50 transition-colors cursor-pointer">
+<td class="px-4 py-3 whitespace-nowrap">
+<div class="flex items-center gap-2">
+<div class="h-6 w-1 bg-transparent rounded-full"></div>
+<span class="px-2 py-1 rounded bg-slate-800 text-slate-300 text-xs font-bold border border-slate-700">Tram 3</span>
+</div>
+</td>
+<td class="px-4 py-3 whitespace-nowrap text-sm text-slate-400">V2</td>
+<td class="px-4 py-3 whitespace-nowrap">
+<span class="px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-400 text-[10px] font-medium border border-sky-500/20">Inbound</span>
+</td>
+<td class="px-4 py-3 whitespace-nowrap">
+<div class="flex flex-col gap-0.5">
+<span class="text-xs text-slate-300">Westfield</span>
+<span class="text-xs text-slate-500">Southgate</span>
+</div>
+</td>
+</tr>
+<!-- Standard Row -->
+<tr class="hover:bg-slate-800/50 transition-colors cursor-pointer">
+<td class="px-4 py-3 whitespace-nowrap">
+<div class="flex items-center gap-2">
+<div class="h-6 w-1 bg-transparent rounded-full"></div>
+<span class="px-2 py-1 rounded bg-slate-800 text-slate-300 text-xs font-bold border border-slate-700">45X</span>
+</div>
+</td>
+<td class="px-4 py-3 whitespace-nowrap text-sm text-slate-400">V1</td>
+<td class="px-4 py-3 whitespace-nowrap">
+<span class="px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-400 text-[10px] font-medium border border-orange-500/20">Loop</span>
+</td>
+<td class="px-4 py-3 whitespace-nowrap">
+<div class="flex flex-col gap-0.5">
+<span class="text-xs text-slate-300">Airport</span>
+<span class="text-xs text-slate-500">City Center</span>
+</div>
+</td>
+</tr>
+<!-- Standard Row -->
+<tr class="hover:bg-slate-800/50 transition-colors cursor-pointer">
+<td class="px-4 py-3 whitespace-nowrap">
+<div class="flex items-center gap-2">
+<div class="h-6 w-1 bg-transparent rounded-full"></div>
+<span class="px-2 py-1 rounded bg-slate-800 text-slate-300 text-xs font-bold border border-slate-700">Bus 99</span>
+</div>
+</td>
+<td class="px-4 py-3 whitespace-nowrap text-sm text-slate-400">V1</td>
+<td class="px-4 py-3 whitespace-nowrap">
+<span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-medium border border-emerald-500/20">Outbound</span>
+</td>
+<td class="px-4 py-3 whitespace-nowrap">
+<div class="flex flex-col gap-0.5">
+<span class="text-xs text-slate-300">Harbor</span>
+<span class="text-xs text-slate-500">Old Town</span>
+</div>
+</td>
+</tr>
+<!-- Standard Row -->
+<tr class="hover:bg-slate-800/50 transition-colors cursor-pointer">
+<td class="px-4 py-3 whitespace-nowrap">
+<div class="flex items-center gap-2">
+<div class="h-6 w-1 bg-transparent rounded-full"></div>
+<span class="px-2 py-1 rounded bg-slate-800 text-slate-300 text-xs font-bold border border-slate-700">12B</span>
+</div>
+</td>
+<td class="px-4 py-3 whitespace-nowrap text-sm text-slate-400">V1</td>
+<td class="px-4 py-3 whitespace-nowrap">
+<span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-medium border border-emerald-500/20">Outbound</span>
+</td>
+<td class="px-4 py-3 whitespace-nowrap">
+<div class="flex flex-col gap-0.5">
+<span class="text-xs text-slate-300">East End</span>
+<span class="text-xs text-slate-500">West End</span>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination -->
+<div class="p-3 border-t border-border-dark flex items-center justify-between bg-surface-dark">
+<span class="text-xs text-slate-400">Page 1 of 5</span>
+<div class="flex gap-2">
+<button class="p-1.5 rounded bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 disabled:opacity-50 transition-colors">
+<span class="material-symbols-outlined text-lg">chevron_left</span>
+</button>
+<button class="p-1.5 rounded bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors">
+<span class="material-symbols-outlined text-lg">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Right Panel: Map (60%) -->
+<div class="w-3/5 relative bg-[#0f172a] overflow-hidden group">
+<!-- Map Background Layer (Abstract Representation) -->
+<div class="absolute inset-0 map-bg opacity-80" data-alt="Abstract GIS map background showing grid lines" data-location="Berlin" style=""></div>
+<!-- Faint Map Streets (SVG illustration for GIS look) -->
+<svg class="absolute inset-0 w-full h-full text-slate-700/20 pointer-events-none" xmlns="http://www.w3.org/2000/svg">
+<!-- Random street-like paths -->
+<path d="M-100 200 L300 250 L500 150 L800 180" fill="none" stroke="currentColor" stroke-width="2"></path>
+<path d="M200 -50 L250 300 L280 600" fill="none" stroke="currentColor" stroke-width="2"></path>
+<path d="M600 -50 L550 400 L500 800" fill="none" stroke="currentColor" stroke-width="2"></path>
+<path d="M100 500 L400 450 L900 550" fill="none" stroke="currentColor" stroke-width="2"></path>
+<!-- Water feature representation -->
+<path d="M-50 400 Q 300 350, 600 500 T 1000 450" fill="none" opacity="0.5" stroke="#1e293b" stroke-width="40"></path>
+</svg>
+<!-- Active Route Layer -->
+<svg class="absolute inset-0 w-full h-full pointer-events-none z-10" xmlns="http://www.w3.org/2000/svg">
+<!-- The glowing route line -->
+<defs>
+<filter height="140%" id="glow" width="140%" x="-20%" y="-20%">
+<fegaussianblur result="blur" stddeviation="4"></fegaussianblur>
+<fecomposite in="SourceGraphic" in2="blur" operator="over"></fecomposite>
+</filter>
+</defs>
+<path class="opacity-80" d="M150 180 L250 220 L350 200 L450 350 L650 380 L750 320" fill="none" filter="url(#glow)" stroke="#135bec" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"></path>
+<path d="M150 180 L250 220 L350 200 L450 350 L650 380 L750 320" fill="none" stroke="#60a5fa" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+<!-- Map Overlay Elements (Stops) -->
+<div class="absolute inset-0 z-20 pointer-events-none">
+<!-- Stop 1: Start -->
+<div class="absolute left-[142px] top-[172px] flex flex-col items-center group/pin pointer-events-auto cursor-pointer">
+<div class="w-4 h-4 rounded-full bg-slate-900 border-2 border-white shadow-[0_0_10px_rgba(255,255,255,0.5)] z-20"></div>
+<div class="mt-1 px-2 py-1 bg-slate-800 text-white text-[10px] rounded shadow-lg opacity-0 group-hover/pin:opacity-100 transition-opacity whitespace-nowrap border border-slate-600">
+                            Start: Central St
+                        </div>
+</div>
+<!-- Intermediate Stop -->
+<div class="absolute left-[346px] top-[196px] w-2 h-2 rounded-full bg-primary border border-white shadow-lg pointer-events-auto cursor-pointer hover:scale-150 transition-transform"></div>
+<!-- Intermediate Stop -->
+<div class="absolute left-[446px] top-[346px] w-2 h-2 rounded-full bg-primary border border-white shadow-lg pointer-events-auto cursor-pointer hover:scale-150 transition-transform"></div>
+<!-- Stop 2: End -->
+<div class="absolute left-[742px] top-[312px] flex flex-col items-center group/pin pointer-events-auto cursor-pointer">
+<div class="relative">
+<div class="absolute -inset-1 bg-primary rounded-full blur opacity-75 animate-pulse"></div>
+<div class="relative w-4 h-4 rounded-full bg-primary border-2 border-white shadow-lg z-20"></div>
+</div>
+<div class="mt-1 px-2 py-1 bg-slate-800 text-white text-[10px] rounded shadow-lg opacity-100 transition-opacity whitespace-nowrap border border-slate-600">
+                            End: North Park
+                        </div>
+</div>
+</div>
+<!-- Floating Route Info Card -->
+<div class="absolute top-4 left-4 z-30 bg-slate-900/90 backdrop-blur border border-slate-700 p-3 rounded-lg shadow-xl w-64">
+<div class="flex items-center justify-between mb-2">
+<h3 class="text-white text-sm font-semibold">Route 10A</h3>
+<span class="text-xs text-primary font-medium bg-primary/10 px-2 py-0.5 rounded border border-primary/20">Active</span>
+</div>
+<div class="flex justify-between items-end">
+<div class="flex flex-col gap-1">
+<span class="text-xs text-slate-400">Total Distance</span>
+<span class="text-sm text-slate-200 font-medium">8.4 km</span>
+</div>
+<div class="flex flex-col gap-1 text-right">
+<span class="text-xs text-slate-400">Stops</span>
+<span class="text-sm text-slate-200 font-medium">14</span>
+</div>
+</div>
+</div>
+<!-- Map Controls -->
+<div class="absolute bottom-6 right-6 z-30 flex flex-col gap-2">
+<div class="bg-slate-800 border border-slate-700 rounded-lg shadow-lg flex flex-col overflow-hidden">
+<button class="p-2 text-slate-300 hover:text-white hover:bg-slate-700 border-b border-slate-700 transition-colors">
+<span class="material-symbols-outlined text-[20px]">add</span>
+</button>
+<button class="p-2 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors">
+<span class="material-symbols-outlined text-[20px]">remove</span>
+</button>
+</div>
+<button class="p-2 bg-slate-800 border border-slate-700 rounded-lg shadow-lg text-slate-300 hover:text-white hover:bg-slate-700 transition-colors">
+<span class="material-symbols-outlined text-[20px]">layers</span>
+</button>
+</div>
+<!-- Scale -->
+<div class="absolute bottom-6 left-6 z-30 bg-slate-900/80 px-2 py-1 rounded text-[10px] text-slate-400 border border-slate-700">
+                    500 m
+                </div>
+</div>
+</div>
+</main>
+</body></html>

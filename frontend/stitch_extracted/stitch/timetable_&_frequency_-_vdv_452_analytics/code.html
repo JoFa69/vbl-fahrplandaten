@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>VDV Analytics - Timetable &amp; Frequency</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Configuration -->
+<script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#135bec",
+              "background-light": "#f6f6f8",
+              "background-dark": "#111318",
+              "surface-dark": "#1c1f27",
+              "border-dark": "#282e39",
+              "accent-teal": "#2dd4bf",
+              "accent-purple": "#a855f7",
+            },
+            fontFamily: {
+              "display": ["Inter", "sans-serif"],
+              "body": ["Inter", "sans-serif"],
+            },
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom scrollbar for data-dense tables */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111318; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #3b4354; 
+            border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #565f73; 
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 overflow-hidden">
+<div class="flex h-screen w-full bg-background-light dark:bg-background-dark overflow-hidden">
+<!-- Sidebar Navigation -->
+<div class="hidden md:flex flex-col w-[280px] border-r border-border-dark bg-background-dark shrink-0 h-full overflow-y-auto custom-scrollbar">
+<div class="flex h-full flex-col justify-between p-4">
+<div class="flex flex-col gap-4">
+<div class="flex gap-3 px-2 py-2">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 shrink-0" data-alt="Abstract geometric data visualization pattern" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDP9uoP01FIkCEuI1ffw9TPe-2tRhmxHJtjUCN4bOn5ODwNdYWelmkqOTQzpDw4mzxy_QVP7rOqTLBKu229UWSj87aPacN_68ZzbBmY_hR0TDGH0nS-TCTyDeperXsIr9WB4TuqjYs6BXwGFISR2V1z5MW3H6O5R7jMWd-xPX66N3vpaNNOgvraMK2d8hLap-gChQAeqk-hr9ZnuzVn_tSV9Of2uQZC71RLEmrusjZ7rwm1shPH01M0zhdAq1MGO-8mMv5PccfhqA");'></div>
+<div class="flex flex-col justify-center">
+<h1 class="text-white text-base font-bold leading-tight">VDV Analytics</h1>
+<p class="text-[#9da6b9] text-xs font-normal">Enterprise Edition</p>
+</div>
+</div>
+<div class="h-px bg-border-dark w-full my-1"></div>
+<div class="flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#9da6b9] hover:bg-white/5 hover:text-white transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-white">donut_large</span>
+<span class="text-sm font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary text-white shadow-lg shadow-primary/20" href="#">
+<span class="material-symbols-outlined text-[20px] fill-1">calendar_month</span>
+<span class="text-sm font-medium">Timetable &amp; Freq</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#9da6b9] hover:bg-white/5 hover:text-white transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-white">map</span>
+<span class="text-sm font-medium">Route Map</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#9da6b9] hover:bg-white/5 hover:text-white transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-white">directions_bus</span>
+<span class="text-sm font-medium">Fleet Status</span>
+</a>
+<div class="h-px bg-border-dark w-full my-2"></div>
+<p class="px-3 text-xs font-semibold text-[#565f73] uppercase tracking-wider mb-1">Analysis</p>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#9da6b9] hover:bg-white/5 hover:text-white transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-white">timeline</span>
+<span class="text-sm font-medium">Delays</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#9da6b9] hover:bg-white/5 hover:text-white transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-white">group</span>
+<span class="text-sm font-medium">Occupancy</span>
+</a>
+</div>
+</div>
+<div class="flex flex-col gap-2">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#9da6b9] hover:bg-white/5 hover:text-white transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-white">settings</span>
+<span class="text-sm font-medium">Settings</span>
+</a>
+<div class="flex items-center gap-3 px-3 py-3 rounded-lg bg-surface-dark border border-border-dark mt-2">
+<div class="size-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-xs">JD</div>
+<div class="flex flex-col">
+<p class="text-white text-xs font-medium">John Doe</p>
+<p class="text-[#9da6b9] text-[10px]">Planner Admin</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Main Content -->
+<div class="flex flex-1 flex-col h-full overflow-hidden relative">
+<!-- Header & Filters -->
+<header class="bg-background-dark border-b border-border-dark p-6 shrink-0 z-10">
+<div class="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="text-[#9da6b9] text-xs font-medium uppercase tracking-wider">VDV 452 Analysis</span>
+<span class="text-border-dark">•</span>
+<span class="text-accent-teal text-xs font-medium">Live Data</span>
+</div>
+<h2 class="text-white text-2xl font-bold tracking-tight">Line 104 (City Center Loop)</h2>
+</div>
+<div class="flex flex-wrap items-center gap-3">
+<div class="relative group">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-[#9da6b9] text-[20px]">calendar_today</span>
+</div>
+<select class="pl-10 pr-8 py-2.5 bg-surface-dark border border-border-dark rounded-lg text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none appearance-none cursor-pointer hover:bg-[#232833] transition-colors min-w-[160px]">
+<option>Oct 24, 2023</option>
+<option>Oct 23, 2023</option>
+<option>Oct 22, 2023</option>
+</select>
+<div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-[#9da6b9] text-[16px]">expand_more</span>
+</div>
+</div>
+<div class="relative group">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-[#9da6b9] text-[20px]">filter_alt</span>
+</div>
+<select class="pl-10 pr-8 py-2.5 bg-surface-dark border border-border-dark rounded-lg text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none appearance-none cursor-pointer hover:bg-[#232833] transition-colors min-w-[140px]">
+<option>All Directions</option>
+<option>Inbound</option>
+<option>Outbound</option>
+</select>
+<div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-[#9da6b9] text-[16px]">expand_more</span>
+</div>
+</div>
+<button class="flex items-center gap-2 px-4 py-2.5 bg-primary hover:bg-primary/90 text-white text-sm font-semibold rounded-lg transition-colors shadow-lg shadow-primary/25 ml-2">
+<span class="material-symbols-outlined text-[20px]">download</span>
+<span>Export Report</span>
+</button>
+</div>
+</div>
+<!-- Key Metrics -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+<div class="bg-surface-dark border border-border-dark p-4 rounded-xl flex items-center justify-between group hover:border-primary/50 transition-colors cursor-default">
+<div class="flex flex-col gap-1">
+<span class="text-[#9da6b9] text-sm font-medium">Total Scheduled Trips</span>
+<div class="flex items-baseline gap-2">
+<span class="text-3xl font-bold text-white">142</span>
+<span class="text-emerald-500 text-xs font-medium flex items-center bg-emerald-500/10 px-1.5 py-0.5 rounded">
+<span class="material-symbols-outlined text-[12px] mr-0.5">trending_up</span> 2.5%
+                            </span>
+</div>
+</div>
+<div class="size-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500">
+<span class="material-symbols-outlined">directions_bus</span>
+</div>
+</div>
+<div class="bg-surface-dark border border-border-dark p-4 rounded-xl flex items-center justify-between group hover:border-primary/50 transition-colors cursor-default">
+<div class="flex flex-col gap-1">
+<span class="text-[#9da6b9] text-sm font-medium">Peak Frequency</span>
+<div class="flex items-baseline gap-2">
+<span class="text-3xl font-bold text-white">12</span>
+<span class="text-[#9da6b9] text-sm font-normal">trips/hr</span>
+</div>
+</div>
+<div class="size-10 rounded-full bg-accent-teal/10 flex items-center justify-center text-accent-teal">
+<span class="material-symbols-outlined">bar_chart</span>
+</div>
+</div>
+<div class="bg-surface-dark border border-border-dark p-4 rounded-xl flex items-center justify-between group hover:border-primary/50 transition-colors cursor-default">
+<div class="flex flex-col gap-1">
+<span class="text-[#9da6b9] text-sm font-medium">Avg Headway</span>
+<div class="flex items-baseline gap-2">
+<span class="text-3xl font-bold text-white">10</span>
+<span class="text-[#9da6b9] text-sm font-normal">min</span>
+<span class="text-rose-500 text-xs font-medium flex items-center bg-rose-500/10 px-1.5 py-0.5 rounded ml-1">
+<span class="material-symbols-outlined text-[12px] mr-0.5">trending_down</span> 1.2%
+                            </span>
+</div>
+</div>
+<div class="size-10 rounded-full bg-accent-purple/10 flex items-center justify-center text-accent-purple">
+<span class="material-symbols-outlined">schedule</span>
+</div>
+</div>
+</div>
+</header>
+<!-- Scrollable Content Area -->
+<main class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
+<!-- Top Section: Hourly Frequency Chart -->
+<section class="bg-surface-dark border border-border-dark rounded-xl p-5 shadow-sm">
+<div class="flex items-center justify-between mb-6">
+<h3 class="text-white text-lg font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined text-accent-teal">equalizer</span>
+                        Trip Frequency (Per Hour)
+                    </h3>
+<div class="flex items-center gap-2">
+<div class="flex items-center gap-1.5 px-2 py-1 bg-background-dark rounded border border-border-dark">
+<div class="size-2.5 rounded-full bg-accent-teal"></div>
+<span class="text-xs text-[#9da6b9]">Weekday</span>
+</div>
+<div class="flex items-center gap-1.5 px-2 py-1 bg-background-dark rounded border border-border-dark">
+<div class="size-2.5 rounded-full bg-[#3b4354]"></div>
+<span class="text-xs text-[#9da6b9]">Weekend Avg</span>
+</div>
+</div>
+</div>
+<!-- Custom CSS Bar Chart -->
+<div class="w-full h-[240px] flex items-end justify-between gap-1 sm:gap-2 pt-4 relative">
+<!-- Y-Axis Grid Lines (Visual Only) -->
+<div class="absolute inset-0 flex flex-col justify-between pointer-events-none z-0">
+<div class="w-full h-px bg-border-dark border-dashed border-t border-gray-800"></div>
+<div class="w-full h-px bg-border-dark border-dashed border-t border-gray-800"></div>
+<div class="w-full h-px bg-border-dark border-dashed border-t border-gray-800"></div>
+<div class="w-full h-px bg-border-dark border-dashed border-t border-gray-800"></div>
+<div class="w-full h-px bg-gray-700"></div> <!-- Baseline -->
+</div>
+<!-- Bars -->
+<!-- Loop for 24 hours simulation -->
+<div class="group relative flex-1 h-full flex items-end">
+<div class="w-full bg-accent-teal/20 h-[10%] rounded-t-sm group-hover:bg-accent-teal/40 transition-all relative z-10"></div>
+<span class="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-gray-500">00</span>
+</div>
+<div class="group relative flex-1 h-full flex items-end">
+<div class="w-full bg-accent-teal/20 h-[5%] rounded-t-sm group-hover:bg-accent-teal/40 transition-all relative z-10"></div>
+<span class="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-gray-500">01</span>
+</div>
+<div class="group relative flex-1 h-full flex items-end">
+<div class="w-full bg-accent-teal/20 h-[5%] rounded-t-sm group-hover:bg-accent-teal/40 transition-all relative z-10"></div>
+<span class="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-gray-500">02</span>
+</div>
+<div class="group relative flex-1 h-full flex items-end">
+<div class="w-full bg-accent-teal/20 h-[5%] rounded-t-sm group-hover:bg-accent-teal/40 transition-all relative z-10"></div>
+<span class="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-gray-500">03</span>
+</div>
+<div class="group relative flex-1 h-full flex items-end">
+<div class="w-full bg-accent-teal/30 h-[15%] rounded-t-sm group-hover:bg-accent-teal/50 transition-all relative z-10"></div>
+<span class="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-gray-500">04</span>
+</div>
+<div class="group relative flex-1 h-full flex items-end">
+<div class="w-full bg-accent-teal/60 h-[45%] rounded-t-sm group-hover:bg-accent-teal/80 transition-all relative z-10"></div>
+<span class="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-gray-500">05</span>
+</div>
+<div class="group relative flex-1 h-full flex items-end">
+<div class="w-full bg-accent-teal h-[85%] rounded-t-sm group-hover:bg-accent-teal-400 transition-all relative z-10 shadow-[0_0_10px_rgba(45,212,191,0.3)]"></div>
+<span class="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-white font-bold">06</span>
+</div>
+<div class="group relative flex-1 h-full flex items-end">
+<div class="w-full bg-accent-teal h-[100%] rounded-t-sm group-hover:bg-accent-teal-400 transition-all relative z-10 shadow-[0_0_15px_rgba(45,212,191,0.5)]"></div>
+<span class="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-white font-bold">07</span>
+</div>
+<div class="group relative flex-1 h-full flex items-end">
+<div class="w-full bg-accent-teal h-[90%] rounded-t-sm group-hover:bg-accent-teal-400 transition-all relative z-10 shadow-[0_0_10px_rgba(45,212,191,0.3)]"></div>
+<span class="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-white font-bold">08</span>
+</div>
+<div class="group relative flex-1 h-full flex items-end">
+<div class="w-full bg-accent-teal/80 h-[60%] rounded-t-sm group-hover:bg-accent-teal transition-all relative z-10"></div>
+<span class="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-gray-500">09</span>
+</div>
+<div class="group relative flex-1 h-full flex items-end">
+<div class="w-full bg-accent-teal/70 h-[50%] rounded-t-sm group-hover:bg-accent-teal/90 transition-all relative z-10"></div>
+<span class="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-gray-500">10</span>
+</div>
+<div class="group relative flex-1 h-full flex items-end">
+<div class="w-full bg-accent-teal/70 h-[50%] rounded-t-sm group-hover:bg-accent-teal/90 transition-all relative z-10"></div>
+<span class="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-gray-500">11</span>
+</div>
+<div class="group relative flex-1 h-full flex items-end">
+<div class="w-full bg-accent-teal/70 h-[55%] rounded-t-sm group-hover:bg-accent-teal/90 transition-all relative z-10"></div>
+<span class="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-gray-500">12</span>
+</div>
+<div class="group relative flex-1 h-full flex items-end">
+<div class="w-full bg-accent-teal/70 h-[50%] rounded-t-sm group-hover:bg-accent-teal/90 transition-all relative z-10"></div>
+<span class="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-gray-500">13</span>
+</div>
+<div class="group relative flex-1 h-full flex items-end">
+<div class="w-full bg-accent-teal/70 h-[55%] rounded-t-sm group-hover:bg-accent-teal/90 transition-all relative z-10"></div>
+<span class="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-gray-500">14</span>
+</div>
+<div class="group relative flex-1 h-full flex items-end">
+<div class="w-full bg-accent-teal/80 h-[70%] rounded-t-sm group-hover:bg-accent-teal transition-all relative z-10"></div>
+<span class="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-gray-500">15</span>
+</div>
+<div class="group relative flex-1 h-full flex items-end">
+<div class="w-full bg-accent-teal h-[95%] rounded-t-sm group-hover:bg-accent-teal-400 transition-all relative z-10 shadow-[0_0_10px_rgba(45,212,191,0.3)]"></div>
+<span class="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-white font-bold">16</span>
+</div>
+<div class="group relative flex-1 h-full flex items-end">
+<div class="w-full bg-accent-teal h-[90%] rounded-t-sm group-hover:bg-accent-teal-400 transition-all relative z-10 shadow-[0_0_10px_rgba(45,212,191,0.3)]"></div>
+<span class="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-white font-bold">17</span>
+</div>
+<div class="group relative flex-1 h-full flex items-end">
+<div class="w-full bg-accent-teal/80 h-[65%] rounded-t-sm group-hover:bg-accent-teal transition-all relative z-10"></div>
+<span class="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-gray-500">18</span>
+</div>
+<div class="group relative flex-1 h-full flex items-end">
+<div class="w-full bg-accent-teal/60 h-[45%] rounded-t-sm group-hover:bg-accent-teal/80 transition-all relative z-10"></div>
+<span class="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-gray-500">19</span>
+</div>
+<div class="group relative flex-1 h-full flex items-end">
+<div class="w-full bg-accent-teal/40 h-[30%] rounded-t-sm group-hover:bg-accent-teal/60 transition-all relative z-10"></div>
+<span class="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-gray-500">20</span>
+</div>
+<div class="group relative flex-1 h-full flex items-end">
+<div class="w-full bg-accent-teal/30 h-[20%] rounded-t-sm group-hover:bg-accent-teal/50 transition-all relative z-10"></div>
+<span class="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-gray-500">21</span>
+</div>
+<div class="group relative flex-1 h-full flex items-end">
+<div class="w-full bg-accent-teal/20 h-[15%] rounded-t-sm group-hover:bg-accent-teal/40 transition-all relative z-10"></div>
+<span class="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-gray-500">22</span>
+</div>
+<div class="group relative flex-1 h-full flex items-end">
+<div class="w-full bg-accent-teal/20 h-[10%] rounded-t-sm group-hover:bg-accent-teal/40 transition-all relative z-10"></div>
+<span class="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-gray-500">23</span>
+</div>
+</div>
+<div class="mt-8 text-center">
+<p class="text-xs text-[#9da6b9]">Time of Day (24h)</p>
+</div>
+</section>
+<!-- Bottom Section: Gantt-style Timeline -->
+<section class="bg-surface-dark border border-border-dark rounded-xl p-5 shadow-sm overflow-hidden flex flex-col h-[500px]">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 shrink-0">
+<div>
+<h3 class="text-white text-lg font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined text-accent-purple">view_timeline</span>
+                            Vehicle Headway Timeline
+                        </h3>
+<p class="text-sm text-[#9da6b9] mt-1">Real-time tracking of active blocks and intervals.</p>
+</div>
+<div class="flex items-center gap-2">
+<button class="px-3 py-1.5 bg-background-dark border border-border-dark hover:border-[#9da6b9] rounded-md text-xs text-white transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">zoom_in</span> Zoom In
+                        </button>
+<button class="px-3 py-1.5 bg-background-dark border border-border-dark hover:border-[#9da6b9] rounded-md text-xs text-white transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">zoom_out</span> Zoom Out
+                        </button>
+</div>
+</div>
+<!-- Timeline Container -->
+<div class="flex flex-1 border border-border-dark rounded-lg bg-background-dark overflow-hidden relative">
+<!-- Y-Axis (Vehicle/Run IDs) -->
+<div class="w-[140px] border-r border-border-dark bg-surface-dark shrink-0 overflow-y-auto custom-scrollbar pt-10 z-20">
+<!-- Labels -->
+<div class="h-10 flex items-center px-4 text-xs font-mono text-[#9da6b9] border-b border-border-dark/50 hover:bg-white/5 cursor-pointer">Run 104-01</div>
+<div class="h-10 flex items-center px-4 text-xs font-mono text-[#9da6b9] border-b border-border-dark/50 hover:bg-white/5 cursor-pointer">Run 104-02</div>
+<div class="h-10 flex items-center px-4 text-xs font-mono text-[#9da6b9] border-b border-border-dark/50 hover:bg-white/5 cursor-pointer">Run 104-03</div>
+<div class="h-10 flex items-center px-4 text-xs font-mono text-[#9da6b9] border-b border-border-dark/50 hover:bg-white/5 cursor-pointer">Run 104-04</div>
+<div class="h-10 flex items-center px-4 text-xs font-mono text-[#9da6b9] border-b border-border-dark/50 hover:bg-white/5 cursor-pointer">Run 104-05</div>
+<div class="h-10 flex items-center px-4 text-xs font-mono text-[#9da6b9] border-b border-border-dark/50 hover:bg-white/5 cursor-pointer">Run 104-06</div>
+<div class="h-10 flex items-center px-4 text-xs font-mono text-[#9da6b9] border-b border-border-dark/50 hover:bg-white/5 cursor-pointer">Run 104-07</div>
+<div class="h-10 flex items-center px-4 text-xs font-mono text-[#9da6b9] border-b border-border-dark/50 hover:bg-white/5 cursor-pointer">Run 104-08</div>
+<div class="h-10 flex items-center px-4 text-xs font-mono text-[#9da6b9] border-b border-border-dark/50 hover:bg-white/5 cursor-pointer">Run 104-09</div>
+<div class="h-10 flex items-center px-4 text-xs font-mono text-[#9da6b9] border-b border-border-dark/50 hover:bg-white/5 cursor-pointer">Run 104-10</div>
+<div class="h-10 flex items-center px-4 text-xs font-mono text-[#9da6b9] border-b border-border-dark/50 hover:bg-white/5 cursor-pointer">Run 104-11</div>
+</div>
+<!-- Chart Area -->
+<div class="flex-1 overflow-x-auto custom-scrollbar relative bg-[#13161c]">
+<!-- Time Markers (Top X-Axis) -->
+<div class="h-10 border-b border-border-dark flex items-center sticky top-0 bg-surface-dark z-10 w-[1200px]">
+<div class="flex-1 text-center text-[10px] text-[#9da6b9] border-l border-border-dark/50">06:00</div>
+<div class="flex-1 text-center text-[10px] text-[#9da6b9] border-l border-border-dark/50">06:30</div>
+<div class="flex-1 text-center text-[10px] text-white font-bold border-l border-border-dark/50 bg-white/5">07:00</div>
+<div class="flex-1 text-center text-[10px] text-white font-bold border-l border-border-dark/50 bg-white/5">07:30</div>
+<div class="flex-1 text-center text-[10px] text-white font-bold border-l border-border-dark/50 bg-white/5">08:00</div>
+<div class="flex-1 text-center text-[10px] text-[#9da6b9] border-l border-border-dark/50">08:30</div>
+<div class="flex-1 text-center text-[10px] text-[#9da6b9] border-l border-border-dark/50">09:00</div>
+<div class="flex-1 text-center text-[10px] text-[#9da6b9] border-l border-border-dark/50">09:30</div>
+<div class="flex-1 text-center text-[10px] text-[#9da6b9] border-l border-border-dark/50">10:00</div>
+<div class="flex-1 text-center text-[10px] text-[#9da6b9] border-l border-border-dark/50">10:30</div>
+</div>
+<!-- Grid Background -->
+<div class="absolute inset-0 top-10 w-[1200px] flex pointer-events-none">
+<div class="flex-1 border-r border-border-dark/20 h-full"></div>
+<div class="flex-1 border-r border-border-dark/20 h-full"></div>
+<div class="flex-1 border-r border-border-dark/20 h-full bg-accent-teal/5"></div> <!-- Peak Highlight -->
+<div class="flex-1 border-r border-border-dark/20 h-full bg-accent-teal/5"></div>
+<div class="flex-1 border-r border-border-dark/20 h-full bg-accent-teal/5"></div>
+<div class="flex-1 border-r border-border-dark/20 h-full"></div>
+<div class="flex-1 border-r border-border-dark/20 h-full"></div>
+<div class="flex-1 border-r border-border-dark/20 h-full"></div>
+<div class="flex-1 border-r border-border-dark/20 h-full"></div>
+<div class="flex-1 border-r border-border-dark/20 h-full"></div>
+</div>
+<!-- Data Bars Container -->
+<div class="w-[1200px] pt-0">
+<!-- Row 1 -->
+<div class="h-10 w-full relative border-b border-border-dark/30 hover:bg-white/5 transition-colors group">
+<div class="absolute top-2 bottom-2 left-[5%] w-[18%] bg-gradient-to-r from-accent-purple to-purple-400 rounded-sm shadow-sm cursor-pointer hover:brightness-110 flex items-center px-2">
+<span class="text-[9px] text-white font-bold truncate">Route 104 • In</span>
+</div>
+<div class="absolute top-2 bottom-2 left-[30%] w-[18%] bg-gradient-to-r from-accent-purple to-purple-400 rounded-sm shadow-sm cursor-pointer hover:brightness-110 opacity-60"></div>
+</div>
+<!-- Row 2 -->
+<div class="h-10 w-full relative border-b border-border-dark/30 hover:bg-white/5 transition-colors group">
+<div class="absolute top-2 bottom-2 left-[12%] w-[18%] bg-gradient-to-r from-indigo-500 to-primary rounded-sm shadow-sm cursor-pointer hover:brightness-110 flex items-center px-2">
+<span class="text-[9px] text-white font-bold truncate">Route 104 • Out</span>
+</div>
+<div class="absolute top-2 bottom-2 left-[38%] w-[18%] bg-gradient-to-r from-indigo-500 to-primary rounded-sm shadow-sm cursor-pointer hover:brightness-110 opacity-60"></div>
+</div>
+<!-- Row 3 -->
+<div class="h-10 w-full relative border-b border-border-dark/30 hover:bg-white/5 transition-colors group">
+<div class="absolute top-2 bottom-2 left-[19%] w-[18%] bg-gradient-to-r from-accent-purple to-purple-400 rounded-sm shadow-sm cursor-pointer hover:brightness-110 flex items-center px-2">
+<span class="text-[9px] text-white font-bold truncate">Route 104 • In</span>
+</div>
+<div class="absolute top-2 bottom-2 left-[45%] w-[18%] bg-gradient-to-r from-accent-purple to-purple-400 rounded-sm shadow-sm cursor-pointer hover:brightness-110 opacity-60"></div>
+</div>
+<!-- Row 4 -->
+<div class="h-10 w-full relative border-b border-border-dark/30 hover:bg-white/5 transition-colors group">
+<div class="absolute top-2 bottom-2 left-[26%] w-[18%] bg-gradient-to-r from-indigo-500 to-primary rounded-sm shadow-sm cursor-pointer hover:brightness-110 flex items-center px-2">
+<span class="text-[9px] text-white font-bold truncate">Route 104 • Out</span>
+</div>
+<div class="absolute top-2 bottom-2 left-[52%] w-[18%] bg-gradient-to-r from-indigo-500 to-primary rounded-sm shadow-sm cursor-pointer hover:brightness-110 opacity-60"></div>
+</div>
+<!-- Row 5 (Gap Example) -->
+<div class="h-10 w-full relative border-b border-border-dark/30 hover:bg-white/5 transition-colors group">
+<!-- Large Gap due to break -->
+<div class="absolute top-2 bottom-2 left-[4%] w-[10%] bg-gradient-to-r from-accent-purple to-purple-400 rounded-sm shadow-sm cursor-pointer hover:brightness-110"></div>
+<div class="absolute top-2 bottom-2 left-[40%] w-[18%] bg-gradient-to-r from-accent-purple to-purple-400 rounded-sm shadow-sm cursor-pointer hover:brightness-110"></div>
+</div>
+<!-- Current Time Indicator Line -->
+<div class="absolute top-0 bottom-0 left-[28%] w-px bg-rose-500 z-30 pointer-events-none">
+<div class="absolute -top-1 -left-1.5 w-3 h-3 bg-rose-500 rounded-full shadow-lg shadow-rose-500/50"></div>
+</div>
+<!-- Additional rows for visual density -->
+<div class="h-10 w-full relative border-b border-border-dark/30 hover:bg-white/5 transition-colors group"><div class="absolute top-2 bottom-2 left-[33%] w-[18%] bg-gradient-to-r from-indigo-500 to-primary rounded-sm shadow-sm opacity-80"></div></div>
+<div class="h-10 w-full relative border-b border-border-dark/30 hover:bg-white/5 transition-colors group"><div class="absolute top-2 bottom-2 left-[42%] w-[18%] bg-gradient-to-r from-accent-purple to-purple-400 rounded-sm shadow-sm opacity-80"></div></div>
+<div class="h-10 w-full relative border-b border-border-dark/30 hover:bg-white/5 transition-colors group"><div class="absolute top-2 bottom-2 left-[48%] w-[18%] bg-gradient-to-r from-indigo-500 to-primary rounded-sm shadow-sm opacity-80"></div></div>
+<div class="h-10 w-full relative border-b border-border-dark/30 hover:bg-white/5 transition-colors group"><div class="absolute top-2 bottom-2 left-[55%] w-[18%] bg-gradient-to-r from-accent-purple to-purple-400 rounded-sm shadow-sm opacity-80"></div></div>
+<div class="h-10 w-full relative border-b border-border-dark/30 hover:bg-white/5 transition-colors group"><div class="absolute top-2 bottom-2 left-[62%] w-[18%] bg-gradient-to-r from-indigo-500 to-primary rounded-sm shadow-sm opacity-80"></div></div>
+</div>
+</div>
+</div>
+<!-- Legend -->
+<div class="mt-4 flex flex-wrap gap-6 text-xs text-[#9da6b9]">
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 rounded bg-accent-purple"></div>
+<span>Inbound Trip</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 rounded bg-primary"></div>
+<span>Outbound Trip</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-px h-3 bg-rose-500"></div>
+<span>Current Time</span>
+</div>
+</div>
+</section>
+</main>
+</div>
+</div>
+</body></html>

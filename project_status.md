@@ -42,16 +42,18 @@ Das System folgt einer 3-Schicht-Architektur:
 | :--- | :--- | :--- |
 | **Fahrten-Volumen** | Analyse der Fahrtenanzahl pro Linie. Drill-Down auf Stunden und Richtungen. | ✅ Live |
 | **Netz-Geometrie** | Auflistung aller Linien, Varianten und Haltestellenfolgen inkl. Koordinaten. | ✅ Live |
+| **Karte & Perlschnur** | Interaktive Map-Darstellung (Leaflet) synchronisiert mit Resizable-Panels und Perlschnur für Routen. | ✅ Live |
 | **Zeit-Analyse** | Durchschnittliche Fahrtdauern pro Linie und Variante (Pünktlichkeits-Potential). | ✅ Live |
 | **Infrastruktur** | Heatmap der Haltestellen-Belastung (Abfahrten pro Stunde). | ✅ Live |
+| **Daten-Manager** | Übersicht über extrahierte VDV-Rohdateien und DuckDB-Tabellen-Metriken (Thread-safe API). | ✅ Live |
 
 ### UI/UX Konzept
 *   **Full-Width:** Nutzung der gesamten Bildschirmbreite für maximale Datendichte.
 *   **Drill-Down:** Interaktive Filterung (Klick auf Linie -> Filtert Dashboard auf diese Linie).
 *   **High-Contrast:** Optimiert für Lesbarkeit (Dunkle Schrift auf hellem Grund).
 *   **Scrollable Charts:** Automatische Skalierung bei großen Datensätzen (z.B. >50 Linien).
+*   **Resizable Panels:** Dynamische Aufteilung zwischen Karten- und Detailansichten (z.B. Perlschnur).
 
 ## 3. Offene Punkte / Next Steps
-*   [ ] **Karte:** Visualisierung der `dim_route` und `dim_ort` auf einer interaktiven Karte (Leaflet/Mapbox).
 *   [ ] **Echtzeit:** Integration von VDV 453/454 Echtzeit-Daten (Soll vs. Ist Vergleich).
 *   [ ] **Export:** CSV/Excel Export der angezeigten Tabellen.

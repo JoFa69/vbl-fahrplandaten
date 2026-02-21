@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Data Manager History - VDV 452 Analytics</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101622",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #2d3748;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex overflow-hidden">
+<!-- Sidebar Navigation -->
+<aside class="w-64 border-r border-slate-200 dark:border-slate-800 flex flex-col bg-white dark:bg-background-dark z-20">
+<div class="p-6 flex items-center gap-3">
+<div class="size-10 bg-primary rounded-lg flex items-center justify-center text-white shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined">analytics</span>
+</div>
+<div class="flex flex-col">
+<h1 class="text-sm font-bold leading-none">VDV 452</h1>
+<p class="text-[10px] text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider mt-1">Enterprise Analytics</p>
+</div>
+</div>
+<nav class="flex-1 px-4 py-4 space-y-1 overflow-y-auto custom-scrollbar">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors group" href="#">
+<span class="material-symbols-outlined text-xl">dashboard</span>
+<span class="text-sm font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 bg-primary/10 text-primary rounded-lg transition-colors group" href="#">
+<span class="material-symbols-outlined text-xl">database</span>
+<span class="text-sm font-medium">Data Manager</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors group" href="#">
+<span class="material-symbols-outlined text-xl">map</span>
+<span class="text-sm font-medium">Network Map</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors group" href="#">
+<span class="material-symbols-outlined text-xl">calendar_month</span>
+<span class="text-sm font-medium">Schedules</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors group" href="#">
+<span class="material-symbols-outlined text-xl">show_chart</span>
+<span class="text-sm font-medium">Performance</span>
+</a>
+<div class="pt-8 pb-2 px-3">
+<p class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Admin</p>
+</div>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors group" href="#">
+<span class="material-symbols-outlined text-xl">group</span>
+<span class="text-sm font-medium">Users</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors group" href="#">
+<span class="material-symbols-outlined text-xl">settings</span>
+<span class="text-sm font-medium">Settings</span>
+</a>
+</nav>
+<div class="p-4 border-t border-slate-200 dark:border-slate-800">
+<div class="flex items-center gap-3 p-2 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+<div class="size-8 rounded-full bg-slate-300 dark:bg-slate-700 overflow-hidden">
+<img alt="User Avatar" class="w-full h-full object-cover" data-alt="Portrait of a male professional avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA7_6cVq38Yjcpp8L_2PmZsBimIPnSjoe7GFJ-WucY4Z3SaTD4KYcMqNgkbLE_-6po8Kg7XnYK0B2jtssaBgA-KYEkqIPSkde0cbA-D7_XlzBbTEXNjZtzup-NLfxxTZ2qDeMzHfu2uHXdyWwecDPRL6ta_-pt00sWNFMJWHZBH7CSd6_MTX2w6jjYgGQWxA21TnJvcd_Up7D3HMj2UAacJVHzVwTmkjnYjnu6BPbaAInlovcSmrX_0E7Yfj-3PZIPKz4QlhF0Zeg"/>
+</div>
+<div class="flex flex-col">
+<span class="text-xs font-semibold">Felix Meyer</span>
+<span class="text-[10px] text-slate-500">System Admin</span>
+</div>
+<button class="ml-auto text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-lg">logout</span>
+</button>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col overflow-y-auto custom-scrollbar bg-white dark:bg-background-dark">
+<!-- Top Bar -->
+<header class="h-16 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-8 bg-white/50 dark:bg-background-dark/50 backdrop-blur-md sticky top-0 z-10">
+<div class="flex items-center gap-2">
+<h2 class="text-lg font-bold tracking-tight">Data Manager History</h2>
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">v4.5.2</span>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-slate-500 hover:text-primary transition-colors relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2.5 size-2 bg-red-500 rounded-full border-2 border-white dark:border-background-dark"></span>
+</button>
+<button class="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-sm">upload</span>
+                    New Import
+                </button>
+</div>
+</header>
+<div class="p-8 space-y-8 max-w-7xl mx-auto w-full">
+<!-- KPI Section -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+<div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-xl transition-all hover:border-primary/50 group">
+<div class="flex justify-between items-start mb-2">
+<span class="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider">Total Lines</span>
+<span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform">route</span>
+</div>
+<div class="flex items-end gap-2">
+<span class="text-3xl font-black text-slate-900 dark:text-white">142</span>
+<span class="text-emerald-500 text-xs font-bold mb-1 flex items-center">
+<span class="material-symbols-outlined text-xs">arrow_upward</span>
+                            2.4%
+                        </span>
+</div>
+</div>
+<div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-xl transition-all hover:border-primary/50 group">
+<div class="flex justify-between items-start mb-2">
+<span class="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider">Active Trips</span>
+<span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform">directions_bus</span>
+</div>
+<div class="flex items-end gap-2">
+<span class="text-3xl font-black text-slate-900 dark:text-white">12,840</span>
+<span class="text-emerald-500 text-xs font-bold mb-1 flex items-center">
+<span class="material-symbols-outlined text-xs">arrow_upward</span>
+                            0.8%
+                        </span>
+</div>
+</div>
+<div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-xl transition-all hover:border-primary/50 group">
+<div class="flex justify-between items-start mb-2">
+<span class="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider">Stop Points</span>
+<span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform">location_on</span>
+</div>
+<div class="flex items-end gap-2">
+<span class="text-3xl font-black text-slate-900 dark:text-white">3,105</span>
+<span class="text-amber-500 text-xs font-bold mb-1 flex items-center">
+<span class="material-symbols-outlined text-xs">arrow_downward</span>
+                            0.2%
+                        </span>
+</div>
+</div>
+<div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-xl transition-all hover:border-primary/50 group">
+<div class="flex justify-between items-start mb-2">
+<span class="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider">Data Validity</span>
+<span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform">verified</span>
+</div>
+<div class="flex items-end gap-2">
+<span class="text-3xl font-black text-slate-900 dark:text-white">98.2%</span>
+<span class="text-emerald-500 text-xs font-bold mb-1 flex items-center">
+<span class="material-symbols-outlined text-xs">arrow_upward</span>
+                            0.1%
+                        </span>
+</div>
+</div>
+</div>
+<!-- Table Section -->
+<div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
+<div class="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+<h3 class="text-md font-bold text-slate-900 dark:text-white flex items-center gap-2">
+<span class="material-symbols-outlined text-slate-400">history</span>
+                        Import History
+                    </h3>
+<div class="flex items-center gap-2">
+<div class="relative">
+<input class="bg-slate-50 dark:bg-slate-800 border-none rounded-lg text-xs px-8 py-2 w-48 focus:ring-1 focus:ring-primary transition-all" placeholder="Search history..." type="text"/>
+<span class="material-symbols-outlined absolute left-2.5 top-2 text-slate-400 text-sm">search</span>
+</div>
+<button class="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+<span class="material-symbols-outlined text-xl">filter_list</span>
+</button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400">
+<th class="px-6 py-4 text-[11px] font-bold uppercase tracking-wider">Import Date</th>
+<th class="px-6 py-4 text-[11px] font-bold uppercase tracking-wider">Validity Period</th>
+<th class="px-6 py-4 text-[11px] font-bold uppercase tracking-wider">Records (L/T)</th>
+<th class="px-6 py-4 text-[11px] font-bold uppercase tracking-wider">Status</th>
+<th class="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+<!-- Row 1 -->
+<tr class="group hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4">
+<div class="flex flex-col">
+<span class="text-sm font-semibold text-slate-900 dark:text-slate-100">2023-10-12</span>
+<span class="text-[11px] text-slate-500 dark:text-slate-500">08:45 AM</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-xs text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">01.01.24 — 31.12.24</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="flex flex-col">
+<span class="text-xs font-bold text-slate-900 dark:text-slate-100">142</span>
+<span class="text-[10px] text-slate-500 uppercase">Lines</span>
+</div>
+<div class="w-px h-6 bg-slate-200 dark:bg-slate-700"></div>
+<div class="flex flex-col">
+<span class="text-xs font-bold text-slate-900 dark:text-slate-100">12,840</span>
+<span class="text-[10px] text-slate-500 uppercase">Trips</span>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2 text-emerald-500 font-bold text-[11px]">
+<span class="size-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                        SUCCESS
+                                    </div>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-4">
+<a class="text-primary hover:underline text-xs font-bold whitespace-nowrap" href="#">Rohdaten prüfen</a>
+<a class="text-primary hover:underline text-xs font-bold whitespace-nowrap" href="#">DB-Einträge ansehen</a>
+</div>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="group hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4">
+<div class="flex flex-col">
+<span class="text-sm font-semibold text-slate-900 dark:text-slate-100">2023-10-10</span>
+<span class="text-[11px] text-slate-500 dark:text-slate-500">02:20 PM</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-xs text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">01.01.24 — 31.12.24</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="flex flex-col">
+<span class="text-xs font-bold text-slate-900 dark:text-slate-100">140</span>
+<span class="text-[10px] text-slate-500 uppercase">Lines</span>
+</div>
+<div class="w-px h-6 bg-slate-200 dark:bg-slate-700"></div>
+<div class="flex flex-col">
+<span class="text-xs font-bold text-slate-900 dark:text-slate-100">12,100</span>
+<span class="text-[10px] text-slate-500 uppercase">Trips</span>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2 text-amber-500 font-bold text-[11px]">
+<span class="size-2 rounded-full bg-amber-500"></span>
+                                        WARNING
+                                    </div>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-4">
+<a class="text-primary hover:underline text-xs font-bold whitespace-nowrap" href="#">Rohdaten prüfen</a>
+<a class="text-primary hover:underline text-xs font-bold whitespace-nowrap" href="#">DB-Einträge ansehen</a>
+</div>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="group hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4">
+<div class="flex flex-col">
+<span class="text-sm font-semibold text-slate-900 dark:text-slate-100">2023-09-28</span>
+<span class="text-[11px] text-slate-500 dark:text-slate-500">09:15 AM</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-xs text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">01.07.23 — 31.12.23</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="flex flex-col">
+<span class="text-xs font-bold text-slate-900 dark:text-slate-100">138</span>
+<span class="text-[10px] text-slate-500 uppercase">Lines</span>
+</div>
+<div class="w-px h-6 bg-slate-200 dark:bg-slate-700"></div>
+<div class="flex flex-col">
+<span class="text-xs font-bold text-slate-900 dark:text-slate-100">11,950</span>
+<span class="text-[10px] text-slate-500 uppercase">Trips</span>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2 text-emerald-500 font-bold text-[11px]">
+<span class="size-2 rounded-full bg-emerald-500"></span>
+                                        SUCCESS
+                                    </div>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-4">
+<a class="text-primary hover:underline text-xs font-bold whitespace-nowrap" href="#">Rohdaten prüfen</a>
+<a class="text-primary hover:underline text-xs font-bold whitespace-nowrap" href="#">DB-Einträge ansehen</a>
+</div>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="group hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4 border-l-4 border-red-500/20">
+<div class="flex flex-col">
+<span class="text-sm font-semibold text-slate-900 dark:text-slate-100">2023-09-15</span>
+<span class="text-[11px] text-slate-500 dark:text-slate-500">11:30 AM</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-xs text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">01.07.23 — 31.12.23</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="flex flex-col">
+<span class="text-xs font-bold text-slate-900 dark:text-slate-100">138</span>
+<span class="text-[10px] text-slate-500 uppercase">Lines</span>
+</div>
+<div class="w-px h-6 bg-slate-200 dark:bg-slate-700"></div>
+<div class="flex flex-col">
+<span class="text-xs font-bold text-slate-900 dark:text-slate-100">11,900</span>
+<span class="text-[10px] text-slate-500 uppercase">Trips</span>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2 text-rose-500 font-bold text-[11px]">
+<span class="size-2 rounded-full bg-rose-500"></span>
+                                        CRITICAL ERROR
+                                    </div>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-4 opacity-50 cursor-not-allowed">
+<span class="text-slate-400 text-xs font-bold whitespace-nowrap">Rohdaten prüfen</span>
+<span class="text-slate-400 text-xs font-bold whitespace-nowrap">DB-Einträge ansehen</span>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="px-6 py-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-800/30">
+<p class="text-[11px] text-slate-500 dark:text-slate-400 font-medium italic">Showing 1-4 of 12 imports</p>
+<div class="flex items-center gap-1">
+<button class="size-8 flex items-center justify-center rounded border border-slate-200 dark:border-slate-700 text-slate-400 hover:bg-white dark:hover:bg-slate-700 transition-colors">
+<span class="material-symbols-outlined text-sm">chevron_left</span>
+</button>
+<button class="size-8 flex items-center justify-center rounded bg-primary text-white text-xs font-bold">1</button>
+<button class="size-8 flex items-center justify-center rounded border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold hover:bg-white dark:hover:bg-slate-700 transition-colors">2</button>
+<button class="size-8 flex items-center justify-center rounded border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold hover:bg-white dark:hover:bg-slate-700 transition-colors">3</button>
+<button class="size-8 flex items-center justify-center rounded border border-slate-200 dark:border-slate-700 text-slate-400 hover:bg-white dark:hover:bg-slate-700 transition-colors">
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Context Info -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 pb-12">
+<div class="bg-primary/5 border border-primary/20 p-6 rounded-xl flex items-start gap-4">
+<div class="p-3 bg-primary/10 text-primary rounded-lg">
+<span class="material-symbols-outlined">info</span>
+</div>
+<div>
+<h4 class="text-sm font-bold text-slate-900 dark:text-white mb-1">VDV 452 Specification</h4>
+<p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">The current data import complies with the VDV 452 version 3.0 standard. All coordinates use the EPSG:4326 (WGS84) reference system for network mapping accuracy.</p>
+</div>
+</div>
+<div class="bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-6 rounded-xl flex items-start gap-4">
+<div class="p-3 bg-slate-200 dark:bg-slate-800 text-slate-500 rounded-lg">
+<span class="material-symbols-outlined">analytics</span>
+</div>
+<div>
+<h4 class="text-sm font-bold text-slate-900 dark:text-white mb-1">Next Data Refresh</h4>
+<p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">Scheduled automated import for upcoming winter timetable is set for October 25th, 2023. Manual overrides will be disabled during processing.</p>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

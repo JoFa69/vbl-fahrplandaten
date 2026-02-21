@@ -7,6 +7,7 @@ import shutil
 DB_FILE = 'vdv_schedule.duckdb'
 DATA_DIR = 'data'
 ZIP_FILE = 'VBL_FP27_220126_VDV.zip'
+MAIN_DB_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "20261231_fahrplandaten_2027.db")
 
 def setup_data_directory():
     """Extracts ZIP file if data directory is empty or missing."""
@@ -105,6 +106,66 @@ def import_x10_files(con):
         except Exception as e:
             print(f"  -> Error importing {filename}: {e}")
 
+def transform_coordinates(con):
+    """Applies coordinate transformation (custom VDV DMS -> WGS84 Decimal) to rec_ort."""
+    print("Transforming coordinates in rec_ort...")
+    tables = [x[0] for x in con.execute("SHOW TABLES").fetchall()]
+    
+    if 'rec_ort' not in tables:
+        print("  -> rec_ort table not found. Skipping transformation.")
+        return
+
+    # Define the macro for transformation
+    # Logic: 
+    #   Länge (East): 81508770 -> G=8, M=15, S=08.770
+    #   Breite (North): 470151544 -> G=47, M=01, S=51.544
+    # The format seems to always be: 
+    #   Last 7 digits: MMSSsss
+    #   Everything before: Degrees
+    
+    con.execute("""
+        CREATE OR REPLACE MACRO vdv_dms_to_dd(val) AS 
+        CASE 
+            WHEN length(val) < 8 THEN NULL 
+            ELSE
+                CAST(substr(val, 1, length(val) - 7) AS INTEGER) + 
+                CAST(substr(val, length(val) - 6, 2) AS INTEGER) / 60.0 + 
+                (CAST(substr(val, length(val) - 4, 2) AS INTEGER) + 
+                 CAST(substr(val, length(val) - 2, 3) AS DOUBLE) / 1000.0) / 3600.0
+        END
+    """)
+
+    # Update the table
+    try:
+        # Create a backup/calculated column first or update in place? 
+        # rec_ort usually has ORT_POS_LAENGE / ORT_POS_BREITE as VARCHAR from import.
+        # We will parse them and update.
+        
+        # Check if columns exist
+        cols = [x[0] for x in con.execute("DESCRIBE rec_ort").fetchall()]
+        if 'ORT_POS_LAENGE' in cols and 'ORT_POS_BREITE' in cols:
+            count = con.execute("SELECT COUNT(*) FROM rec_ort WHERE ORT_POS_LAENGE IS NOT NULL").fetchone()[0]
+            print(f"  -> Updating {count} rows...")
+            
+            con.execute("""
+                UPDATE rec_ort 
+                SET 
+                    ORT_POS_LAENGE = CAST(vdv_dms_to_dd(ORT_POS_LAENGE) AS VARCHAR),
+                    ORT_POS_BREITE = CAST(vdv_dms_to_dd(ORT_POS_BREITE) AS VARCHAR)
+                WHERE ORT_POS_LAENGE IS NOT NULL AND ORT_POS_BREITE IS NOT NULL
+            """)
+            print("  -> Transformation complete.")
+            
+            # Verify one sample
+            res = con.execute("SELECT ORT_POS_LAENGE, ORT_POS_BREITE FROM rec_ort LIMIT 1").fetchone()
+            print(f"  -> Sample converted: Lon={res[0]}, Lat={res[1]}")
+            
+        else:
+            print("  -> Required columns ORT_POS_LAENGE/ORT_POS_BREITE not found.")
+            
+    except Exception as e:
+        print(f"  -> Error transforming coordinates: {e}")
+
 def create_views_and_cleaning(con):
     """Creates views for cleaned data."""
     print("Creating views and cleaning data...")
@@ -123,10 +184,6 @@ def run_integrity_checks(con):
     print("\nRunning Integrity Checks...")
     
     tables = [x[0] for x in con.execute("SHOW TABLES").fetchall()]
-    
-    # Check: lid_verlauf vs rec_lid
-    # Join Keys: LI_NR and STR_LI_VAR (and BASIS_VERSION potentially, but let's stick to LI_NR first)
-    # Actually, let's use LI_NR + STR_LI_VAR as it defines the line variant.
     
     if 'rec_lid' in tables and 'lid_verlauf' in tables:
         print("  -> Checking orphaned Line References in lid_verlauf (LI_NR, STR_LI_VAR)...")
@@ -158,6 +215,45 @@ def run_integrity_checks(con):
     else:
         print("  -> Skipping line check (tables missing).")
 
+def sync_to_main_db(con):
+    """Updates the Main DB (dim_ort) with the corrected coordinates from VDV DB."""
+    print(f"\nSyncing to Main DB: {MAIN_DB_PATH}...")
+    
+    if not os.path.exists(MAIN_DB_PATH):
+        print(f"  -> Main DB not found at {MAIN_DB_PATH}. Skipping sync.")
+        return
+
+    try:
+        # Attach Main DB
+        con.execute(f"ATTACH '{MAIN_DB_PATH}' AS main_db")
+        
+        # Update dim_ort from rec_ort
+        print("  -> Updating dim_ort coordinates...")
+        query = """
+            UPDATE main_db.dim_ort 
+            SET 
+                lat = CAST(src.ORT_POS_BREITE AS DOUBLE),
+                lon = CAST(src.ORT_POS_LAENGE AS DOUBLE)
+            FROM rec_ort src
+            WHERE main_db.dim_ort.ort_nr = CAST(src.ORT_NR AS INTEGER)
+        """
+        con.execute(query)
+        
+        # Cleanup Orphans (Zombies)
+        print("  -> Cleaning up orphan/zombie entries in dim_ort...")
+        cleanup_query = """
+            DELETE FROM main_db.dim_ort 
+            WHERE ort_nr NOT IN (SELECT CAST(ORT_NR AS INTEGER) FROM rec_ort)
+        """
+        con.execute(cleanup_query)
+        
+        print("  -> Sync complete.")
+        
+        con.execute("DETACH main_db")
+
+    except Exception as e:
+        print(f"  -> Error syncing to Main DB: {e}")
+
 def main():
     setup_data_directory()
     
@@ -165,8 +261,10 @@ def main():
     con = duckdb.connect(DB_FILE)
     
     import_x10_files(con)
+    transform_coordinates(con)
     create_views_and_cleaning(con)
     run_integrity_checks(con)
+    sync_to_main_db(con)
     
     con.close()
     print("\nDone.")

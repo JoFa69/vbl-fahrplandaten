@@ -1,24 +1,37 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { fetchGeometryMetrics } from '../api';
-import './VolumeMetrics.css';
+import { createColumnHelper } from '@tanstack/react-table';
+import GeometryTable from './GeometryTable';
 
-export default function GeometryMetrics() {
-    const [level, setLevel] = useState("lines"); // lines -> variants -> stops
-    const [selectedLine, setSelectedLine] = useState(null);
-    const [selectedVariant, setSelectedVariant] = useState(null);
+const columnHelper = createColumnHelper();
+
+export default function GeometryMetrics({
+    selectedLine,
+    selectedVariant,
+    onLineSelect,
+    onVariantSelect
+}) {
+    const [level, setLevel] = useState("variants"); // variants -> stops
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(false);
+
+    // Sync internal level with props
+    useEffect(() => {
+        if (selectedVariant) {
+            setLevel("stops");
+        } else {
+            setLevel("variants");
+        }
+    }, [selectedVariant]);
 
     useEffect(() => {
         async function load() {
             setLoading(true);
             try {
                 let res = [];
-                if (level === "lines") {
-                    res = await fetchGeometryMetrics("lines");
-                } else if (level === "variants") {
-                    res = await fetchGeometryMetrics("variants", selectedLine.id);
-                } else if (level === "stops") {
+                if (level === "variants") {
+                    res = await fetchGeometryMetrics("variants", selectedLine ? selectedLine.id : null);
+                } else if (level === "stops" && selectedVariant) {
                     res = await fetchGeometryMetrics("stops", null, selectedVariant.id);
                 }
                 setData(res);
@@ -31,73 +44,104 @@ export default function GeometryMetrics() {
         load();
     }, [level, selectedLine, selectedVariant]);
 
-    const handleLineClick = (line) => {
-        setSelectedLine(line);
-        setLevel("variants");
+    const handleBack = () => {
+        onVariantSelect(null);
     };
 
-    const handleVariantClick = (variant) => {
-        setSelectedVariant(variant);
-        setLevel("stops");
-    };
+    // Columns Configuration
+    const variantColumns = useMemo(() => [
+        columnHelper.accessor('line_no', {
+            header: 'Linie',
+            cell: info => <span className="font-bold text-white">{info.getValue()}</span>,
+            enableColumnFilter: true,
+        }),
+        columnHelper.accessor('variant_no', {
+            header: 'Var.',
+            cell: info => <span className="font-mono text-xs">{info.getValue()}</span>,
+        }),
+        columnHelper.accessor('direction', {
+            header: 'Ri.',
+            cell: info => <span className="text-xs">{info.getValue()}</span>,
+        }),
+        columnHelper.accessor('route_info', {
+            header: 'Route',
+            cell: info => <span className="text-xs">{info.getValue()}</span>,
+            enableColumnFilter: true,
+        }),
+        columnHelper.accessor('volume', {
+            header: 'Fahrten',
+            cell: info => <div className="text-right font-mono text-xs">{info.getValue()}</div>,
+        }),
+        columnHelper.accessor('stop_count', {
+            header: 'Halte',
+            cell: info => <div className="text-right font-mono text-xs">{info.getValue()}</div>,
+        }),
+        columnHelper.display({
+            id: 'actions',
+            header: 'Aktion',
+            cell: props => (
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onVariantSelect(props.row.original);
+                    }}
+                    className="text-xs text-blue-400 hover:text-blue-300 underline"
+                >
+                    Details &rarr;
+                </button>
+            ),
+        }),
+    ], [onVariantSelect]);
+
+    const stopColumns = useMemo(() => [
+        columnHelper.accessor('seq', {
+            header: 'Seq',
+            cell: info => <span className="font-mono text-xs text-slate-400">{info.getValue()}</span>,
+        }),
+        columnHelper.accessor('name', {
+            header: 'Haltestelle',
+            cell: info => <span className="text-slate-200">{info.getValue()}</span>,
+            enableColumnFilter: true,
+        }),
+        columnHelper.accessor(row => `${(row.lat || 0).toFixed(4)}, ${(row.lon || 0).toFixed(4)}`, {
+            id: 'coords',
+            header: 'Koord.',
+            cell: info => <div className="text-right font-mono text-xs text-slate-500">{info.getValue()}</div>,
+            enableColumnFilter: false,
+        }),
+    ], []);
 
     return (
-        <div className="metrics-panel">
-            <div className="metrics-header">
-                <h3>Netz-Geometrie</h3>
-                {level !== "lines" && (
-                    <button onClick={() => {
-                        if (level === "stops") setLevel("variants");
-                        else setLevel("lines");
-                    }}>
+        <div className="bg-slate-800 rounded-xl border border-slate-700 p-6 h-full flex flex-col">
+            <div className="flex justify-between items-center mb-4 shrink-0">
+                <h3 className="text-xl font-semibold text-white">Netz-Geometrie</h3>
+                {level === "stops" && (
+                    <button
+                        onClick={handleBack}
+                        className="text-xs px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-md transition-colors"
+                    >
                         &larr; Zurück
                     </button>
                 )}
             </div>
 
-            {loading ? <div>Lade Daten...</div> : (
-                <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                    {level === "lines" && (
-                        <table className="chart-table">
-                            <thead><tr><th>Linie</th><th>Varianten</th><th>Aktion</th></tr></thead>
-                            <tbody>
-                                {data.map(l => (
-                                    <tr key={l.id}>
-                                        <td>{l.name}</td>
-                                        <td>{l.variants}</td>
-                                        <td><button onClick={() => handleLineClick(l)}>Details</button></td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    )}
-                    {level === "variants" && (
-                        <table className="chart-table">
-                            <thead><tr><th>Variante (Hash)</th><th>Haltestellen</th><th>Aktion</th></tr></thead>
-                            <tbody>
-                                {data.map(v => (
-                                    <tr key={v.id}>
-                                        <td title={v.hash}>{v.hash.substring(0, 20)}...</td>
-                                        <td>{v.stop_count}</td>
-                                        <td><button onClick={() => handleVariantClick(v)}>Stops anzeigen</button></td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    )}
-                    {level === "stops" && (
-                        <table className="chart-table">
-                            <thead><tr><th>Seq</th><th>Haltestelle</th><th>Lat/Lon</th></tr></thead>
-                            <tbody>
-                                {data.map(s => (
-                                    <tr key={s.seq}>
-                                        <td>{s.seq}</td>
-                                        <td>{s.name}</td>
-                                        <td>{s.lat.toFixed(4)}, {s.lon.toFixed(4)}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+            {loading ? <div className="text-slate-400">Lade Daten...</div> : (
+                <div className="flex-1 min-h-0">
+                    {level === "variants" ? (
+                        <GeometryTable
+                            data={data}
+                            columns={variantColumns}
+                            onRowClick={onVariantSelect}
+                            filterPlaceholder="Suche in allen Spalten..."
+                            initialSort={[{ id: 'line_no', desc: false }]}
+                        />
+                    ) : (
+                        <GeometryTable
+                            data={data}
+                            columns={stopColumns}
+                            filterPlaceholder="Suche Haltestelle..."
+                            initialSort={[{ id: 'seq', desc: false }]}
+                        />
                     )}
                 </div>
             )}

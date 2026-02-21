@@ -1,4 +1,4 @@
-const API_BASE = "http://localhost:8081/api";
+const API_BASE = "/api";
 
 export async function fetchStats() {
     const res = await fetch(`${API_BASE}/stats`);
@@ -33,6 +33,19 @@ export async function askAI(question) {
     return res.json();
 }
 
+// Lines API
+export async function fetchLines() {
+    const res = await fetch(`${API_BASE}/lines`);
+    if (!res.ok) throw new Error("Failed to fetch lines");
+    return res.json();
+}
+
+export async function fetchLineVariants(line_no, direction_id = 1) {
+    const res = await fetch(`${API_BASE}/lines/${line_no}/variants?direction_id=${direction_id}`);
+    if (!res.ok) throw new Error("Failed to fetch line variants");
+    return res.json();
+}
+
 // Analytics API
 export async function fetchAnalyticsStats() {
     const res = await fetch(`${API_BASE}/analytics/stats`);
@@ -62,11 +75,13 @@ export async function fetchVolumeMetrics(line_no = null, group_by = "line") {
     return res.json();
 }
 
-export async function fetchGeometryMetrics(type = "lines", line_id = null, variant_id = null) {
+export async function fetchGeometryMetrics(type = "lines", line_id = null, variant_id = null, line_no = null, fahrtart = null) {
     const params = new URLSearchParams();
     params.append("type", type);
-    if (line_id) params.append("line_id", line_id);
+    if (line_no) params.append("line_no", line_no);
+    else if (line_id) params.append("line_id", line_id);
     if (variant_id) params.append("variant_id", variant_id);
+    if (fahrtart) params.append("fahrtart", fahrtart);
 
     const res = await fetch(`${API_BASE}/analytics/geometry?${params.toString()}`);
     if (!res.ok) throw new Error("Failed to fetch geometry metrics");
@@ -91,5 +106,47 @@ export async function fetchInfrastructureMetrics(stop_id = null, limit = 10) {
 
     const res = await fetch(`${API_BASE}/analytics/infrastructure?${params.toString()}`);
     if (!res.ok) throw new Error("Failed to fetch infrastructure metrics");
+    return res.json();
+}
+
+
+
+export async function fetchRouteGeometry(line_id, route_id = null) {
+    let url = `${API_BASE}/analytics/geometry/route/${line_id}`;
+    if (route_id) {
+        url += `?route_id=${route_id}`;
+    }
+    const res = await fetch(url);
+    if (!res.ok) {
+        if (res.status === 404) return null;
+        throw new Error("Failed to fetch route geometry");
+    }
+    return res.json();
+}
+
+export async function fetchAllStops() {
+    const res = await fetch(`${API_BASE}/stops`);
+    if (!res.ok) throw new Error("Failed to fetch all stops");
+    return res.json();
+}
+
+export async function fetchPrimaryRoutes(fahrtart = null) {
+    const params = new URLSearchParams();
+    if (fahrtart) params.append("fahrtart", fahrtart);
+    const res = await fetch(`${API_BASE}/analytics/geometry/routes/primary?${params.toString()}`);
+    if (!res.ok) throw new Error("Failed to fetch primary routes");
+    return res.json();
+}
+
+// Raw VDV Files
+export async function fetchRawFiles() {
+    const res = await fetch(`${API_BASE}/raw-files`);
+    if (!res.ok) throw new Error("Failed to fetch raw files");
+    return res.json();
+}
+
+export async function fetchRawFilePreview(filename, limit = 50, offset = 0) {
+    const res = await fetch(`${API_BASE}/raw-file/${filename}?limit=${limit}&offset=${offset}`);
+    if (!res.ok) throw new Error("Failed to fetch raw file preview");
     return res.json();
 }

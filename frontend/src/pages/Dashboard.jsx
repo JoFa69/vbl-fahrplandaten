@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { fetchStats } from "../api";
 import { Database, Table, AlertCircle } from "lucide-react";
 
@@ -69,7 +70,12 @@ export default function Dashboard() {
                 <div className="divide-y divide-slate-700">
                     {stats.sort((a, b) => b.rows - a.rows).map((stat) => (
                         <div key={stat.table} className="px-6 py-3 flex justify-between items-center hover:bg-slate-750">
-                            <span className="font-mono text-slate-300">{stat.table}</span>
+                            <Link
+                                to={`/table/${stat.table}`}
+                                className="font-mono text-slate-300 hover:text-blue-400 hover:underline transition-colors"
+                            >
+                                {stat.table}
+                            </Link>
                             <span className="text-sm text-slate-400 font-mono">{stat.rows.toLocaleString()} Zeilen</span>
                         </div>
                     ))}

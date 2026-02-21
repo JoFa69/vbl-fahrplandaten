@@ -20,11 +20,13 @@ Der Import-Prozess ist abgeschlossen und operativ:
     *   `cub_schedule`: Faktentabelle aller Fahrten (explodiert auf Kalendertage).
 
 ## 4. API & Analytics Schicht
-Das Backend (`backend/app/routers/analytics.py`) stellt REST-Endpunkte bereit für:
+Das Backend (`backend/app/routers/analytics.py`, `data.py`) stellt REST-Endpunkte bereit für:
+*   **Architektur (Thread-Safe):** Endpunkte sind als synchrone `def` Funktionen definiert, wodurch FastAPI diese in einen ThreadPool auslagert. Dies verhindert das Blockieren des Event-Loops durch synchrone DuckDB-Calls. Der Datenbankzugriff erfolgt über eine zentrale Read-Only-Verbindung, welche pro Request einen thread-lokalen Cursor liefert (`.cursor()`).
 *   **`/volume`**: Fahrten-Volumen (Filter: Linie, Stunde, Richtung).
-*   **`/geometry`**: Netz-Struktur (Linien -> Varianten -> Haltestellen).
+*   **`/geometry`**: Netz-Struktur (Linien -> Varianten -> Haltestellen, als Leaflet/Map Features).
 *   **`/time`**: Fahrzeiten und Pünktlichkeit.
 *   **`/infrastructure`**: Haltestellen-Belastung (Events/Stunde).
+*   **`/stats` & `/raw-files`**: Anzeige der DuckDB Tabellenstatistiken und VDV Rohdaten (Daten-Manager).
 
 ## 5. Frontend Dashboard
 Ein "VDV Analyse-Dashboard" (`AnalyticsDashboard.jsx`) bietet:

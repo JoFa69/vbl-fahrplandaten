@@ -1,33 +1,36 @@
 import React, { useEffect, useState } from 'react';
 import { fetchTimeMetrics } from '../api';
-import './VolumeMetrics.css'; // Reuse existing styles for consistency
-
 const MetricsList = ({ data, onSelect, title, unit = "min" }) => {
-    if (!data || data.length === 0) return <div>Keine Daten</div>;
+    if (!data || data.length === 0) return <div className="text-slate-400">Keine Daten</div>;
     const maxValue = Math.max(...data.map(d => d.value));
 
     return (
-        <div className="bar-chart-container">
-            <h4>{title}</h4>
-            <div className="bar-chart-layout">
-                {data.map((item, idx) => (
-                    <div
-                        key={idx}
-                        className="bar-item"
-                        onClick={() => onSelect && onSelect(item)}
-                        title={`${item.label} (${item.name || ''}): ${item.value} ${unit}`}
-                    >
+        <div className="w-full h-full flex flex-col">
+            <h4 className="text-slate-200 font-semibold mb-4 shrink-0">{title}</h4>
+            <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden pb-2 custom-scrollbar">
+                <div className="flex items-end h-full gap-2 px-1 min-w-full w-max">
+                    {data.map((item, idx) => (
                         <div
-                            className="bar-fill"
-                            style={{
-                                height: `${(item.value / maxValue) * 100}%`,
-                                backgroundColor: '#10b981' // Green for time
-                            }}
-                        ></div>
-                        <span className="bar-label">{item.label}</span>
-                        <span className="bar-value">{item.value}</span>
-                    </div>
-                ))}
+                            key={idx}
+                            className="flex flex-col items-center justify-end h-full cursor-pointer hover:opacity-80 transition-opacity min-w-[40px] shrink-0 group"
+                            onClick={() => onSelect && onSelect(item)}
+                            title={`${item.label} (${item.name || ''}): ${item.value} ${unit}`}
+                        >
+                            <div
+                                className="w-full bg-emerald-500 rounded-t-sm min-h-[4px] relative group-hover:bg-emerald-400 transition-colors"
+                                style={{
+                                    height: `${Math.max((item.value / maxValue) * 100, 1)}%`,
+                                }}
+                            ></div>
+                            <span className="text-[10px] font-medium text-slate-400 mt-2 truncate w-full text-center">
+                                {item.label}
+                            </span>
+                            <span className="text-[10px] font-bold text-slate-300 mt-1">
+                                {item.value}
+                            </span>
+                        </div>
+                    ))}
+                </div>
             </div>
         </div>
     );
@@ -90,11 +93,16 @@ export default function TimeMetrics() {
     };
 
     return (
-        <div className="metrics-panel">
-            <div className="metrics-header">
-                <h3>Zeit-Metriken</h3>
+        <div className="bg-slate-800 rounded-xl border border-slate-700 p-6 h-full flex flex-col">
+            <div className="flex justify-between items-center mb-6 shrink-0">
+                <h3 className="text-xl font-semibold text-white">Zeit-Metriken</h3>
                 {level !== "line" && (
-                    <button onClick={handleBack}>&larr; Zurück</button>
+                    <button
+                        onClick={handleBack}
+                        className="text-xs px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-md transition-colors"
+                    >
+                        &larr; Zurück
+                    </button>
                 )}
             </div>
 

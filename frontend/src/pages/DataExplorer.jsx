@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { fetchTables, fetchTableData } from "../api";
 import { ChevronLeft, ChevronRight, Loader2, Search } from "lucide-react";
 
 export default function DataExplorer() {
+    const { tableName } = useParams();
+    const navigate = useNavigate();
     const [tables, setTables] = useState([]);
-    const [selectedTable, setSelectedTable] = useState("");
+    const [selectedTable, setSelectedTable] = useState(tableName || "");
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(false);
     const [page, setPage] = useState(0);
@@ -14,10 +17,16 @@ export default function DataExplorer() {
         fetchTables().then((res) => {
             setTables(res.tables || []);
             if (res.tables && res.tables.length > 0) {
-                if (!selectedTable) setSelectedTable("rec_frt" in res.tables ? "rec_frt" : res.tables[0]);
+                if (!selectedTable) {
+                    if (tableName && res.tables.includes(tableName)) {
+                        setSelectedTable(tableName);
+                    } else {
+                        setSelectedTable("rec_frt" in res.tables ? "rec_frt" : res.tables[0]);
+                    }
+                }
             }
         });
-    }, []);
+    }, [tableName]);
 
     useEffect(() => {
         if (selectedTable) {
@@ -47,6 +56,7 @@ export default function DataExplorer() {
                         onChange={(e) => {
                             setSelectedTable(e.target.value);
                             setPage(0);
+                            navigate(`/table/${e.target.value}`);
                         }}
                     >
                         {tables.map(t => <option key={t} value={t}>{t}</option>)}

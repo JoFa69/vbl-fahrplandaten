@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { fetchInfrastructureMetrics } from '../api';
-import './VolumeMetrics.css';
 
 export default function InfrastructureMetrics() {
     const [view, setView] = useState("top"); // top -> detail
@@ -36,38 +35,48 @@ export default function InfrastructureMetrics() {
     };
 
     return (
-        <div className="metrics-panel">
-            <div className="metrics-header">
-                <h3>Infrastruktur (Haltestellen-Belastung)</h3>
+        <div className="bg-slate-800 rounded-xl border border-slate-700 p-6 h-full flex flex-col">
+            <div className="flex justify-between items-center mb-6 shrink-0">
+                <h3 className="text-xl font-semibold text-white">Infrastruktur (Haltestellen)</h3>
                 {view === "detail" && (
-                    <button onClick={() => { setSelectedStop(null); setView("top"); }}>
-                        &larr; Zurück zu Top Haltestellen
+                    <button
+                        onClick={() => { setSelectedStop(null); setView("top"); }}
+                        className="text-xs px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-md transition-colors"
+                    >
+                        &larr; Zurück
                     </button>
                 )}
             </div>
 
-            {loading ? <div>Lade Daten...</div> : (
-                <div className="bar-chart-container">
-                    <h4>{view === "top" ? "Top 15 Haltestellen (Abfahrten)" : `Belastung pro Stunde: ${selectedStop.label}`}</h4>
-                    <div className="bar-chart-layout">
-                        {data.map((item, idx) => (
-                            <div
-                                key={idx}
-                                className="bar-item"
-                                onClick={() => handleSelect(item)}
-                                title={`${item.label}: ${item.value}`}
-                            >
+            {loading ? <div className="text-slate-400">Lade Daten...</div> : (
+                <div className="w-full h-full flex flex-col">
+                    <h4 className="text-slate-200 font-semibold mb-4 shrink-0">
+                        {view === "top" ? "Top 15 Haltestellen (Abfahrten)" : `Belastung pro Stunde: ${selectedStop.label}`}
+                    </h4>
+                    <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden pb-2 custom-scrollbar">
+                        <div className="flex items-end h-full gap-2 px-1 min-w-full w-max">
+                            {data.map((item, idx) => (
                                 <div
-                                    className="bar-fill"
-                                    style={{
-                                        height: `${(item.value / Math.max(...data.map(d => d.value))) * 100}%`,
-                                        backgroundColor: '#f59e0b' // Amber/Orange
-                                    }}
-                                ></div>
-                                <span className="bar-label">{item.label}</span>
-                                <span className="bar-value">{item.value}</span>
-                            </div>
-                        ))}
+                                    key={idx}
+                                    className="flex flex-col items-center justify-end h-full cursor-pointer hover:opacity-80 transition-opacity min-w-[40px] shrink-0 group"
+                                    onClick={() => handleSelect(item)}
+                                    title={`${item.label}: ${item.value}`}
+                                >
+                                    <div
+                                        className="w-full bg-amber-500 rounded-t-sm min-h-[4px] relative group-hover:bg-amber-400 transition-colors"
+                                        style={{
+                                            height: `${Math.max((item.value / Math.max(...data.map(d => d.value))) * 100, 1)}%`,
+                                        }}
+                                    ></div>
+                                    <span className="text-[10px] font-medium text-slate-400 mt-2 truncate w-full text-center">
+                                        {item.label}
+                                    </span>
+                                    <span className="text-[10px] font-bold text-slate-300 mt-1">
+                                        {item.value}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </div>
             )}

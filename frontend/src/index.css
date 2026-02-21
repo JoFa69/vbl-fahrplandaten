@@ -1,21 +1,115 @@
 @import "tailwindcss";
 
 @theme {
+  /* Primary */
+  --color-primary: #135bec;
+  --color-primary-dark: #0b43b3;
+
+  /* Backgrounds */
+  --color-bg-dark: #101622;
+  --color-surface-dark: #1c2433;
+  --color-surface-lighter: #283042;
+  --color-card-dark: #1a2230;
+
+  /* Borders */
+  --color-border-dark: #2d3748;
+
+  /* Text */
+  --color-text-muted: #9da6b9;
+  --color-text-dim: #565f73;
+
+  /* Semantic */
+  --color-success: #0bda5e;
+  --color-danger: #fa6238;
+  --color-warning: #fbbf24;
+
+  /* Accents */
+  --color-accent-teal: #2dd4bf;
+  --color-accent-purple: #a855f7;
+
+  /* Slate scale */
   --color-slate-900: #0f172a;
   --color-slate-800: #1e293b;
   --color-slate-700: #334155;
+  --color-slate-600: #475569;
+  --color-slate-500: #64748b;
   --color-slate-400: #94a3b8;
   --color-slate-300: #cbd5e1;
+  --color-slate-200: #e2e8f0;
   --color-slate-100: #f1f5f9;
+
   --color-blue-600: #2563eb;
   --color-blue-500: #3b82f6;
   --color-blue-400: #60a5fa;
   --color-cyan-300: #67e8f9;
+
+  --color-emerald-500: #10b981;
+  --color-emerald-400: #34d399;
+
+  --color-rose-500: #f43f5e;
+  --color-amber-500: #f59e0b;
+  --color-red-500: #ef4444;
+  --color-green-500: #22c55e;
+  --color-orange-500: #f97316;
+  --color-purple-500: #a855f7;
+  --color-teal-500: #14b8a6;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
 }
 
 body {
-  background-color: var(--color-slate-900);
+  background-color: var(--color-bg-dark);
   color: var(--color-slate-100);
-  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  margin: 0;
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Custom scrollbar for dark mode */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: var(--color-bg-dark);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--color-border-dark);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--color-slate-600);
+}
+
+/* Glass panel utility */
+.glass-panel {
+  background: rgba(30, 41, 59, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Map grid background */
+.map-bg {
+  background-color: var(--color-bg-dark);
+  background-image:
+    linear-gradient(var(--color-slate-800) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-slate-800) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Material Symbols default styling */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+.fill-1 {
+  font-variation-settings: 'FILL' 1;
 }

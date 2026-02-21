@@ -1,18 +1,21 @@
 import os
 import duckdb
-import google.generativeai as genai
+from google import genai
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from ..database import get_db
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
-# Configure Gemini
-api_key = os.environ.get("GOOGLE_API_KEY")
-if not api_key:
-    print("Warning: GOOGLE_API_KEY not found in environment variables.")
-
-genai.configure(api_key=api_key)
+# Configure Gemini Client
+# The client should be instantiated where it's needed or lazily if possible, 
+# but for simplicity and to follow the previous pattern (but with the new SDK):
+def get_genai_client():
+    api_key = os.environ.get("GOOGLE_API_KEY")
+    if not api_key:
+        print("Warning: GOOGLE_API_KEY not found in environment variables.")
+        return None
+    return genai.Client(api_key=api_key)
 
 class AskRequest(BaseModel):
     question: str
@@ -43,16 +46,24 @@ Rules:
 
 @router.post("/ask", response_model=AskResponse)
 async def ask_question(request: AskRequest):
-    if not api_key:
+    client = get_genai_client()
+    if not client:
         raise HTTPException(status_code=500, detail="Google API Key not configured.")
 
     try:
-        model = genai.GenerativeModel('gemini-pro')
         prompt = f"{SYSTEM_PROMPT}\n\nQuestion: {request.question}\nSQL Query:"
         
-        response = model.generate_content(prompt)
-        # Clean up code blocks
-        sql_query = response.text.strip().replace("```sql", "").replace("```", "").strip()
+        response = client.models.generate_content(
+            model='gemini-3-pro-preview',
+            contents=prompt
+        )
+        
+        # Clean up code blocks if present (the new SDK might still return them if the model outputs them)
+        if response.text:
+             sql_query = response.text.strip().replace("```sql", "").replace("```", "").strip()
+        else:
+             raise HTTPException(status_code=500, detail="Empty response from AI model.")
+
         
         # Security check: only allow SELECT
         if not sql_query.upper().startswith("SELECT"):
