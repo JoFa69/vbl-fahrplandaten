@@ -720,10 +720,10 @@ export default function NetzGeometriePage() {
                                                         Variante
                                                     </th>
                                                     {matrixData.columns.map((col, cIdx) => (
-                                                        <th key={col.id} className="sticky top-0 px-0 py-0 border-b border-slate-800 bg-[#0a0c10] w-[36px] h-[100px] align-bottom shadow-sm" style={{ zIndex: 1000 - cIdx }}>
+                                                        <th key={col.id} className="sticky top-0 px-0 py-0 border-b border-slate-800 bg-[#0a0c10] w-[36px] h-[140px] align-bottom shadow-sm" style={{ zIndex: 1000 - cIdx }}>
                                                             <div className="relative w-full h-full flex items-end justify-center pb-2">
-                                                                <span className="absolute whitespace-nowrap text-[13px] font-medium tracking-wide text-slate-300 hover:text-white hover:z-40 cursor-default transition-colors overflow-hidden text-ellipsis"
-                                                                    style={{ left: '50%', bottom: 8, transformOrigin: '0% 100%', transform: 'rotate(-50deg)', maxWidth: '140px' }}
+                                                                <span className="absolute whitespace-nowrap text-[13px] font-medium tracking-wide text-slate-300 hover:text-white hover:z-40 cursor-default transition-colors"
+                                                                    style={{ left: '50%', bottom: 12, transformOrigin: '0% 100%', transform: 'rotate(-50deg)' }}
                                                                     title={col.name}>
                                                                     {col.name}
                                                                 </span>

@@ -28,19 +28,26 @@ const ResizeHandler = () => {
     return null;
 };
 
-// Fit-to-bounds button component
-const FitBoundsButton = ({ bounds }) => {
+// Fit-to-bounds and map controls component
+const FitBoundsControls = ({ bounds, showNames, setShowNames }) => {
     const map = useMap();
-    const handleClick = useCallback(() => {
+    const handleFitBounds = useCallback(() => {
         if (bounds && bounds.length > 0) {
             map.fitBounds(bounds, { padding: [50, 50], animate: true });
         }
     }, [map, bounds]);
 
     return (
-        <div className="absolute bottom-6 right-4 z-[400] flex flex-col gap-2">
+        <div className="absolute bottom-10 right-4 z-[400] flex flex-col gap-2">
             <button
-                onClick={handleClick}
+                onClick={() => setShowNames(!showNames)}
+                className={`border cursor-pointer rounded-lg shadow-lg p-2 transition-colors flex items-center justify-center ${showNames ? 'bg-primary border-primary text-white' : 'bg-slate-800 border-slate-600 text-slate-300 hover:bg-slate-700 hover:border-slate-500 hover:text-white'}`}
+                title={showNames ? "Haltestellennamen ausblenden" : "Haltestellennamen einblenden"}
+            >
+                <span className="material-symbols-outlined text-xl">{showNames ? 'label_off' : 'label'}</span>
+            </button>
+            <button
+                onClick={handleFitBounds}
                 className="bg-slate-800 border cursor-pointer border-slate-600 rounded-lg shadow-lg p-2 hover:bg-slate-700 hover:border-slate-500 transition-colors flex items-center justify-center text-slate-300 hover:text-white"
                 title="Karte zentrieren"
             >
@@ -55,6 +62,7 @@ const GeometryMap = ({ selectedLine, selectedVariant, showAllStops = false, onLi
     const [primaryRoutes, setPrimaryRoutes] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [showStopNames, setShowStopNames] = useState(false);
 
     // Sync propRouteData to state if provided
     useEffect(() => {
@@ -298,6 +306,11 @@ const GeometryMap = ({ selectedLine, selectedVariant, showAllStops = false, onLi
                                                 Lon: {stop.lon.toFixed(6)}
                                             </div>
                                         </Popup>
+                                        {showStopNames && (
+                                            <Tooltip permanent direction="right" className="bg-white/80 border-slate-300 shadow-sm text-slate-800 font-bold text-[10px] px-1 py-0.5 mt-0 leading-tight">
+                                                {stop.stop_point_text || stop.name}
+                                            </Tooltip>
+                                        )}
                                     </CircleMarker>
                                 ))
                         ) : (
@@ -321,6 +334,11 @@ const GeometryMap = ({ selectedLine, selectedVariant, showAllStops = false, onLi
                                                 Lon: {stop.lon.toFixed(6)}
                                             </div>
                                         </Popup>
+                                        {showStopNames && (
+                                            <Tooltip permanent direction="right" className="bg-white/80 border-slate-300 shadow-sm text-slate-800 font-bold text-[10px] px-1 py-0.5 mt-0 leading-tight">
+                                                {stop.stop_point_text || stop.name}
+                                            </Tooltip>
+                                        )}
                                     </CircleMarker>
                                 )
                             ))
@@ -328,7 +346,7 @@ const GeometryMap = ({ selectedLine, selectedVariant, showAllStops = false, onLi
 
                         <MapUpdater bounds={bounds} />
                         <ResizeHandler />
-                        <FitBoundsButton bounds={bounds} />
+                        <FitBoundsControls bounds={bounds} showNames={showStopNames} setShowNames={setShowStopNames} />
                     </MapContainer>
                 )}
             </div>
