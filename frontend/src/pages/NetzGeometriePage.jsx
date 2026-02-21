@@ -704,14 +704,14 @@ export default function NetzGeometriePage() {
                                         <table className="w-full text-left border-collapse" style={{ minWidth: `${matrixData.columns.length * 36 + 120}px` }}>
                                             <thead>
                                                 <tr>
-                                                    <th className="sticky top-0 left-0 bg-[#0a0c10] z-30 px-3 py-2 text-sm font-semibold text-slate-400 border-b border-r border-slate-800 min-w-[80px] max-w-[100px] shadow-sm">
+                                                    <th className="sticky top-0 left-0 bg-[#0a0c10] z-30 px-3 py-2 text-sm font-semibold text-slate-400 border-b border-r border-slate-800 min-w-[70px] max-w-[80px] shadow-sm">
                                                         Variante
                                                     </th>
                                                     {matrixData.columns.map(col => (
                                                         <th key={col.id} className="sticky top-0 px-0 py-0 border-b border-slate-800 bg-[#0a0c10] z-20 w-[36px] h-[120px] align-bottom shadow-sm">
                                                             <div className="relative w-full h-full flex items-end justify-center pb-2">
-                                                                <span className="absolute whitespace-nowrap text-xs text-slate-400 hover:text-white hover:z-40 cursor-default transition-colors"
-                                                                    style={{ left: '50%', bottom: 8, transformOrigin: 'bottom center', transform: 'translateX(-50%) rotate(-55deg)' }}>
+                                                                <span className="absolute whitespace-nowrap text-[11px] font-medium tracking-wide text-slate-400 hover:text-white hover:z-40 cursor-default transition-colors"
+                                                                    style={{ left: '50%', bottom: 4, transformOrigin: '0% 100%', transform: 'rotate(-55deg)' }}>
                                                                     {col.name}
                                                                 </span>
                                                             </div>
@@ -732,10 +732,10 @@ export default function NetzGeometriePage() {
                                                         >
                                                             <td className={`sticky left-0 ${isSelected ? 'bg-slate-800' : 'bg-[#0a0c10]'} z-20 px-3 py-2 border-b border-r border-slate-800 transition-colors`}>
                                                                 <div className="flex items-center gap-2">
-                                                                    <div className="w-3 h-3 rounded-full ring-2 ring-slate-900 shrink-0" style={{ backgroundColor: color }}></div>
+                                                                    <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }}></div>
                                                                     <div className="flex flex-col">
-                                                                        <span className="text-xs font-bold text-slate-200 whitespace-nowrap">Var {row.id}</span>
-                                                                        <span className="text-[10px] text-slate-500">{row.frequency} F.</span>
+                                                                        <span className="text-[11px] font-bold text-slate-200 whitespace-nowrap leading-tight">Var {row.id}</span>
+                                                                        <span className="text-[9px] text-slate-500 leading-tight">{row.frequency} F.</span>
                                                                     </div>
                                                                 </div>
                                                             </td>

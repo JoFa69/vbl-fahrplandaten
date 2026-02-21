@@ -38,17 +38,14 @@ const FitBoundsButton = ({ bounds }) => {
     }, [map, bounds]);
 
     return (
-        <div className="leaflet-top leaflet-right" style={{ marginTop: 10, marginRight: 10 }}>
-            <div className="leaflet-control">
-                <button
-                    onClick={handleClick}
-                    className="bg-white border-2 border-gray-300 rounded-md shadow-md px-2 py-1.5 cursor-pointer hover:bg-gray-100 transition-colors flex items-center gap-1"
-                    title="Karte zentrieren"
-                    style={{ fontSize: 14 }}
-                >
-                    <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#334155' }}>my_location</span>
-                </button>
-            </div>
+        <div className="absolute top-4 right-4 z-[400] flex flex-col gap-2">
+            <button
+                onClick={handleClick}
+                className="bg-slate-800 border cursor-pointer border-slate-600 rounded-lg shadow-lg p-2 hover:bg-slate-700 hover:border-slate-500 transition-colors flex items-center justify-center text-slate-300 hover:text-white"
+                title="Karte zentrieren"
+            >
+                <span className="material-symbols-outlined text-xl">my_location</span>
+            </button>
         </div>
     );
 };
