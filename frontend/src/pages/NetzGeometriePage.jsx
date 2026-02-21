@@ -345,7 +345,7 @@ export default function NetzGeometriePage() {
             enableColumnFilter: false,
             meta: { align: 'right' },
             cell: ({ getValue }) => (
-                <span className="text-xs font-mono text-slate-400">{getValue()}</span>
+                <span className="text-sm font-mono font-bold text-slate-300">{getValue()}</span>
             ),
         },
         {
@@ -649,25 +649,37 @@ export default function NetzGeometriePage() {
                                 {/* Floating Route Info Card */}
                                 {selectedLine && (
                                     <div className="absolute top-4 right-4 glass-panel rounded-xl p-4 z-10 max-w-xs pointer-events-none">
-                                        <div className="flex items-center gap-3 mb-2">
-                                            <span className="px-2.5 py-1 rounded-lg bg-primary text-white text-base font-bold shadow-sm">
-                                                {selectedLine.line_no}
-                                            </span>
-                                            <div>
-                                                <h4 className="text-base font-semibold text-white">
-                                                    {selectedLine.name || 'Route'}
-                                                </h4>
-                                                <p className="text-sm text-text-muted">
-                                                    {selectedVariant
-                                                        ? `Variante ${selectedVariant.variant_no} · ${selectedVariant.stop_count} Halte`
-                                                        : `${selectedLine.variants} Varianten`}
-                                                </p>
+                                        <div className="flex items-center justify-between gap-3 mb-2">
+                                            <div className="flex items-center gap-3">
+                                                <span className="px-2.5 py-1 rounded-lg bg-primary text-white text-base font-bold shadow-sm">
+                                                    {selectedLine.line_no}
+                                                </span>
+                                                <div>
+                                                    <h4 className="text-base font-semibold text-white">
+                                                        {selectedLine.name || 'Route'}
+                                                    </h4>
+                                                    <p className="text-sm text-text-muted">
+                                                        {selectedVariant
+                                                            ? `Variante ${selectedVariant.variant_no} · ${selectedVariant.stop_count} Halte`
+                                                            : `${selectedLine.variants} Varianten`}
+                                                    </p>
+                                                </div>
                                             </div>
                                         </div>
                                         {selectedVariant && (
-                                            <p className="text-sm text-slate-400 mt-1 truncate" title={selectedVariant.route_info}>
-                                                {selectedVariant.route_info}
-                                            </p>
+                                            <div className="flex flex-col gap-3 mt-1">
+                                                <p className="text-sm text-slate-400 truncate w-full" title={selectedVariant.route_info}>
+                                                    {selectedVariant.route_info}
+                                                </p>
+                                                <button
+                                                    onClick={() => handleVariantClick(selectedVariant)}
+                                                    className="px-3 py-1.5 w-full text-[13px] font-medium bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors text-white shadow shadow-slate-900 border border-slate-600 flex items-center justify-center gap-1.5 shrink-0 pointer-events-auto"
+                                                    title="Alle Varianten auf der Karte anzeigen"
+                                                >
+                                                    <span className="material-symbols-outlined text-[16px]">view_list</span>
+                                                    Alle Varianten anzeigen
+                                                </button>
+                                            </div>
                                         )}
                                     </div>
                                 )}
@@ -708,10 +720,10 @@ export default function NetzGeometriePage() {
                                                         Variante
                                                     </th>
                                                     {matrixData.columns.map((col, cIdx) => (
-                                                        <th key={col.id} className="sticky top-0 px-0 py-0 border-b border-slate-800 bg-[#0a0c10] w-[36px] h-[100px] align-bottom shadow-sm" style={{ zIndex: 1000 - cIdx }}>
+                                                        <th key={col.id} className="sticky top-0 px-0 py-0 border-b border-slate-800 bg-[#0a0c10] w-[36px] h-[140px] align-bottom shadow-sm" style={{ zIndex: 1000 - cIdx }}>
                                                             <div className="relative w-full h-full flex items-end justify-center pb-2">
-                                                                <span className="absolute whitespace-nowrap text-[11px] font-medium tracking-wide text-slate-400 hover:text-white hover:z-40 cursor-default transition-colors"
-                                                                    style={{ left: '50%', bottom: 4, transformOrigin: '0% 100%', transform: 'rotate(-55deg)' }}>
+                                                                <span className="absolute whitespace-nowrap text-[13px] font-medium tracking-wide text-slate-300 hover:text-white hover:z-40 cursor-default transition-colors"
+                                                                    style={{ left: '50%', bottom: 8, transformOrigin: '0% 100%', transform: 'rotate(-50deg)' }}>
                                                                     {col.name}
                                                                 </span>
                                                             </div>
@@ -734,8 +746,8 @@ export default function NetzGeometriePage() {
                                                                 <div className="flex items-center gap-2">
                                                                     <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }}></div>
                                                                     <div className="flex flex-col">
-                                                                        <span className="text-[11px] font-bold text-slate-200 whitespace-nowrap leading-tight">Var {row.id}</span>
-                                                                        <span className="text-[9px] text-slate-500 leading-tight">{row.frequency} F.</span>
+                                                                        <span className="text-xs font-bold text-slate-200 whitespace-nowrap leading-tight">Var {row.id}</span>
+                                                                        <span className="text-[11px] font-medium text-slate-400 leading-tight">{row.frequency} F.</span>
                                                                     </div>
                                                                 </div>
                                                             </td>
@@ -808,7 +820,7 @@ export default function NetzGeometriePage() {
                     </div>
                 )}
             </div>
-        </div>
+        </div >
     );
 }
 
