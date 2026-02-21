@@ -720,10 +720,11 @@ export default function NetzGeometriePage() {
                                                         Variante
                                                     </th>
                                                     {matrixData.columns.map((col, cIdx) => (
-                                                        <th key={col.id} className="sticky top-0 px-0 py-0 border-b border-slate-800 bg-[#0a0c10] w-[36px] h-[140px] align-bottom shadow-sm" style={{ zIndex: 1000 - cIdx }}>
+                                                        <th key={col.id} className="sticky top-0 px-0 py-0 border-b border-slate-800 bg-[#0a0c10] w-[36px] h-[100px] align-bottom shadow-sm" style={{ zIndex: 1000 - cIdx }}>
                                                             <div className="relative w-full h-full flex items-end justify-center pb-2">
-                                                                <span className="absolute whitespace-nowrap text-[13px] font-medium tracking-wide text-slate-300 hover:text-white hover:z-40 cursor-default transition-colors"
-                                                                    style={{ left: '50%', bottom: 8, transformOrigin: '0% 100%', transform: 'rotate(-50deg)' }}>
+                                                                <span className="absolute whitespace-nowrap text-[13px] font-medium tracking-wide text-slate-300 hover:text-white hover:z-40 cursor-default transition-colors overflow-hidden text-ellipsis"
+                                                                    style={{ left: '50%', bottom: 8, transformOrigin: '0% 100%', transform: 'rotate(-50deg)', maxWidth: '140px' }}
+                                                                    title={col.name}>
                                                                     {col.name}
                                                                 </span>
                                                             </div>
@@ -745,9 +746,9 @@ export default function NetzGeometriePage() {
                                                             <td className={`sticky left-0 ${isSelected ? 'bg-slate-800' : 'bg-[#0a0c10]'} z-20 px-3 py-2 border-b border-r border-slate-800 transition-colors w-[80px] min-w-[80px] max-w-[80px]`}>
                                                                 <div className="flex items-center gap-2">
                                                                     <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }}></div>
-                                                                    <div className="flex flex-col">
+                                                                    <div className="flex flex-col gap-1 items-start">
                                                                         <span className="text-xs font-bold text-slate-200 whitespace-nowrap leading-tight">Var {row.id}</span>
-                                                                        <span className="text-[11px] font-medium text-slate-400 leading-tight">{row.frequency} F.</span>
+                                                                        <span className="text-[11px] font-medium text-white leading-none bg-slate-700/80 px-1.5 py-0.5 rounded">{row.frequency} F.</span>
                                                                     </div>
                                                                 </div>
                                                             </td>

@@ -38,7 +38,7 @@ const FitBoundsButton = ({ bounds }) => {
     }, [map, bounds]);
 
     return (
-        <div className="absolute top-[90px] right-4 z-[400] flex flex-col gap-2">
+        <div className="absolute bottom-6 right-4 z-[400] flex flex-col gap-2">
             <button
                 onClick={handleClick}
                 className="bg-slate-800 border cursor-pointer border-slate-600 rounded-lg shadow-lg p-2 hover:bg-slate-700 hover:border-slate-500 transition-colors flex items-center justify-center text-slate-300 hover:text-white"
