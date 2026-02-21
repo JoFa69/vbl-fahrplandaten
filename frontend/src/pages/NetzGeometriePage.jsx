@@ -707,8 +707,8 @@ export default function NetzGeometriePage() {
                                                     <th className="sticky top-0 left-0 bg-[#0a0c10] z-30 px-3 py-2 text-sm font-semibold text-slate-400 border-b border-r border-slate-800 w-[80px] min-w-[80px] max-w-[80px] shadow-sm">
                                                         Variante
                                                     </th>
-                                                    {matrixData.columns.map(col => (
-                                                        <th key={col.id} className="sticky top-0 px-0 py-0 border-b border-slate-800 bg-[#0a0c10] z-20 w-[36px] h-[160px] align-bottom shadow-sm">
+                                                    {matrixData.columns.map((col, cIdx) => (
+                                                        <th key={col.id} className="sticky top-0 px-0 py-0 border-b border-slate-800 bg-[#0a0c10] w-[36px] h-[100px] align-bottom shadow-sm" style={{ zIndex: 1000 - cIdx }}>
                                                             <div className="relative w-full h-full flex items-end justify-center pb-2">
                                                                 <span className="absolute whitespace-nowrap text-[11px] font-medium tracking-wide text-slate-400 hover:text-white hover:z-40 cursor-default transition-colors"
                                                                     style={{ left: '50%', bottom: 4, transformOrigin: '0% 100%', transform: 'rotate(-55deg)' }}>
@@ -721,7 +721,7 @@ export default function NetzGeometriePage() {
                                             </thead>
                                             <tbody>
                                                 {matrixData.matrix.map((row, idx) => {
-                                                    const color = VARIANT_COLORS[idx % VARIANT_COLORS.length];
+                                                    const color = VARIANT_COLORS[parseInt(row.id) % VARIANT_COLORS.length];
                                                     const isSelected = selectedVariant?.id === row.id;
 
                                                     return (

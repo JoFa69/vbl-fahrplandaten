@@ -215,7 +215,7 @@ const GeometryMap = ({ selectedLine, selectedVariant, showAllStops = false, onLi
                             const opacity = (selectedVariant && !isSelected) ? 0.2 : 0.8;
                             // Determine weight based on frequency
                             const weight = (!selectedVariant || isSelected) ? Math.max(3, (route.volume / maxVolume) * 12) : 2;
-                            const color = VARIANT_COLORS[idx % VARIANT_COLORS.length];
+                            const color = VARIANT_COLORS[parseInt(route.route_id) % VARIANT_COLORS.length];
 
                             return (
                                 <Polyline
