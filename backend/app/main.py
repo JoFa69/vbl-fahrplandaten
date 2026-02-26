@@ -6,7 +6,7 @@ import os
 # Load environment variables from .env file
 load_dotenv()
 
-from .routers import data, ai, analytics
+from .routers import data, ai, analytics, umlaeufe
 
 app = FastAPI(title="VDV Schedule API")
 
@@ -22,6 +22,7 @@ app.add_middleware(
 app.include_router(data.router, prefix="/api")
 app.include_router(ai.router, prefix="/api")
 app.include_router(analytics.router, prefix="/api")
+app.include_router(umlaeufe.router)
 
 @app.get("/")
 def read_root():

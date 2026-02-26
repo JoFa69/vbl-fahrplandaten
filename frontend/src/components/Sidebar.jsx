@@ -8,7 +8,10 @@ const navItems = [
     { to: '/netz/auslastung', icon: 'layers', label: 'Netz-Auslastung' },
     { to: '/fahrplan', icon: 'calendar_month', label: 'Fahrplan & Frequenz' },
     { to: '/haltestellen', icon: 'location_on', label: 'Haltestellen' },
+    { to: '/haltestellen/charts', icon: 'monitoring', label: 'Haltestellen-Charts' },
     { to: '/vergleich', icon: 'compare_arrows', label: 'Fahrplan-Vergleich' },
+    { to: '/umlaeufe', icon: 'loop', label: 'Umläufe' },
+    { to: '/umlaeufe/charts', icon: 'insert_chart', label: 'Umlauf-Charts' },
 ];
 
 export default function Sidebar() {
@@ -16,6 +19,8 @@ export default function Sidebar() {
 
     const isActive = (path) => {
         if (path === '/') return location.pathname === '/';
+        // Exact match for routes that have sub-routes (e.g. /haltestellen vs /haltestellen/charts)
+        if (path === '/haltestellen') return location.pathname === '/haltestellen';
         return location.pathname.startsWith(path);
     };
 

@@ -8,7 +8,10 @@ const pageTitles = {
     '/netz/auslastung': { breadcrumb: 'Netzwerk', title: 'Auslastung' },
     '/fahrplan': { breadcrumb: null, title: 'Fahrplan & Frequenz' },
     '/haltestellen': { breadcrumb: 'Infrastruktur', title: 'Haltestellen' },
+    '/haltestellen/charts': { breadcrumb: 'Details', title: 'Haltestellen Analyse' },
     '/vergleich': { breadcrumb: null, title: 'Fahrplan-Vergleich' },
+    '/umlaeufe': { breadcrumb: null, title: 'Umläufe' },
+    '/umlaeufe/charts': { breadcrumb: 'Details', title: 'Umlauf Analysen & Effizienz' },
     '/einstellungen': { breadcrumb: null, title: 'Einstellungen' },
 };
 

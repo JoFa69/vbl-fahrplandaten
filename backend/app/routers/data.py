@@ -49,19 +49,27 @@ def get_line_stops(line_no: str):
 
 
 @router.get("/stops")
-def get_stops():
+def get_stops(tagesart: str = None):
     con = get_db()
     try:
+        # Determine the filtering and averaging logic
+        where_clause = ""
+        if tagesart and tagesart != "Alle":
+            where_clause = f"WHERE d.tagesart_abbr = '{tagesart}'"
+
         # Get all stops with coordinates, plus real frequency and line count
-        query = """
+        # Frequency is calculated as average daily trips (total trips / distinct days)
+        query = f"""
             WITH stop_trips AS (
                 SELECT 
                     r.ideal_stop_nr as stop_abbr,
-                    COUNT(DISTINCT s.frt_id) as total_trips,
+                    COUNT(DISTINCT s.frt_id) / CAST(NULLIF(COUNT(DISTINCT s.day_id), 0) AS FLOAT) as avg_daily_trips,
                     COUNT(DISTINCT l.li_no) as num_lines
                 FROM cub_schedule s
                 JOIN dim_route r ON s.route_id = r.route_id
                 JOIN dim_line l ON s.li_id = l.li_id
+                JOIN dim_date d ON s.day_id = d.day_id
+                {where_clause}
                 GROUP BY r.ideal_stop_nr
             ),
             unique_stops AS (
@@ -77,13 +85,13 @@ def get_stops():
             SELECT 
                 u.stop_abbr as stop_id,
                 COALESCE(u.stop_name, u.stop_abbr) as stop_name,
-                COALESCE(st.total_trips, 0) as frequency,
+                COALESCE(CAST(ROUND(st.avg_daily_trips) AS INTEGER), 0) as frequency,
                 COALESCE(st.num_lines, 0) as lines,
                 u.lat,
                 u.lon
             FROM unique_stops u
             LEFT JOIN stop_trips st ON u.stop_abbr = st.stop_abbr
-            ORDER BY st.total_trips DESC NULLS LAST
+            ORDER BY st.avg_daily_trips DESC NULLS LAST
         """
         result = con.execute(query).fetchall()
         return [

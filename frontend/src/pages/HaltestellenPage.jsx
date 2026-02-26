@@ -13,10 +13,7 @@ export default function HaltestellenPage() {
             try {
                 const data = await fetchAllStops();
                 // Add default status since we don't have live operational data yet
-                const processedStops = (data || []).map((s) => ({
-                    ...s,
-                    status: 'Aktiv',
-                }));
+                const processedStops = (data || []).map((s) => ({ ...s }));
                 // Calculate max frequency for relative progress bar scaling
                 const maxFreq = Math.max(...processedStops.map(s => s.frequency), 1);
 
@@ -72,27 +69,26 @@ export default function HaltestellenPage() {
                                 <th className="px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700">Name</th>
                                 <th className="px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700">Frequenz</th>
                                 <th className="px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700">Linien</th>
-                                <th className="px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700">Status</th>
+
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-800">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={5} className="px-4 py-8 text-center text-text-muted">
+                                    <td colSpan={4} className="px-4 py-8 text-center text-text-muted">
                                         <span className="material-symbols-outlined animate-spin text-2xl">progress_activity</span>
                                         <p className="mt-2 text-sm">Lade Haltestellen...</p>
                                     </td>
                                 </tr>
                             ) : filteredStops.length === 0 ? (
                                 <tr>
-                                    <td colSpan={5} className="px-4 py-8 text-center text-text-muted text-sm">
+                                    <td colSpan={4} className="px-4 py-8 text-center text-text-muted text-sm">
                                         Keine Haltestellen gefunden
                                     </td>
                                 </tr>
                             ) : (
                                 filteredStops.slice(0, 100).map((stop) => {
                                     const isSelected = selectedStop?.stop_id === stop.stop_id;
-                                    const isActive = stop.status === 'Aktiv';
                                     return (
                                         <tr
                                             key={stop.stop_id}
@@ -128,12 +124,7 @@ export default function HaltestellenPage() {
                                                     {stop.lines} Linien
                                                 </span>
                                             </td>
-                                            <td className="px-4 py-3">
-                                                <div className={`flex items-center gap-1.5 text-[11px] font-bold ${isActive ? 'text-emerald-500' : 'text-amber-500'}`}>
-                                                    <span className={`size-2 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                                                    {stop.status}
-                                                </div>
-                                            </td>
+
                                         </tr>
                                     );
                                 })
@@ -161,16 +152,7 @@ export default function HaltestellenPage() {
                     </div>
 
                     <div className="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-5">
-                        {/* Status */}
-                        <div className="flex items-center gap-3">
-                            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold ${selectedStop.status === 'Aktiv'
-                                ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
-                                : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
-                                }`}>
-                                <span className={`size-2 rounded-full ${selectedStop.status === 'Aktiv' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                                {selectedStop.status === 'Aktiv' ? 'Operativ — Aktiv' : 'In Wartung'}
-                            </div>
-                        </div>
+
 
                         {/* Coordinates */}
                         {selectedStop.lat && selectedStop.lon && (

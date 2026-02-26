@@ -124,8 +124,11 @@ export async function fetchRouteGeometry(line_id, route_id = null) {
     return res.json();
 }
 
-export async function fetchAllStops() {
-    const res = await fetch(`${API_BASE}/stops`);
+export async function fetchAllStops(tagesart = null) {
+    const params = new URLSearchParams();
+    if (tagesart && tagesart !== "Alle") params.append("tagesart", tagesart);
+
+    const res = await fetch(`${API_BASE}/stops?${params.toString()}`);
     if (!res.ok) throw new Error("Failed to fetch all stops");
     return res.json();
 }
