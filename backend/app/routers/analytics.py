@@ -1253,12 +1253,16 @@ def get_corridor_bildfahrplan(
                 v.schedule_id,
                 l.li_no,
                 r.stop_id,
+                o.stop_abbr,
                 o.stop_point_text as stop_text,
                 r.li_lfd_nr,
                 r.abfahrt,
                 r.ankunft,
                 r.abfahrt // 3600 as std,
                 (r.abfahrt % 3600) // 60 as min,
+                l.li_ri_no as richtung,
+                COALESCE(o_start.stop_point_text, '') as fahrt_start_text,
+                COALESCE(o_end.stop_point_text, '') as fahrt_end_text,
                 CASE 
                     WHEN o_start.stop_abbr IN ('WSTR', 'WEI') OR o_end.stop_abbr IN ('WSTR', 'WEI') THEN true
                     WHEN o_start.stop_name ILIKE '%Depot%' OR o_end.stop_name ILIKE '%Depot%' THEN true
@@ -1284,11 +1288,17 @@ def get_corridor_bildfahrplan(
         for schedule_id, group in df.groupby('schedule_id'):
             li_no = group.iloc[0]['li_no']
             is_depot_run = bool(group.iloc[0]['is_depot_run'])
+            richtung = int(group.iloc[0]['richtung']) if group.iloc[0]['richtung'] is not None else None
+            fahrt_start = str(group.iloc[0]['fahrt_start_text'])
+            fahrt_end = str(group.iloc[0]['fahrt_end_text'])
             points = group.to_dict(orient="records")
             trips.append({
                 "schedule_id": int(schedule_id),
                 "li_no": str(li_no),
                 "is_depot_run": is_depot_run,
+                "richtung": richtung,
+                "fahrt_start": fahrt_start,
+                "fahrt_end": fahrt_end,
                 "points": points
             })
             
