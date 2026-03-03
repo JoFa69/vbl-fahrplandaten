@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Header
 from pydantic import BaseModel
 from typing import List, Optional
 import math
@@ -29,10 +29,10 @@ class UmlaufListResponse(BaseModel):
     pages: int
 
 @router.get("/summary", response_model=UmlaufSummary)
-def get_umlaeufe_summary(tagesart: Optional[str] = Query("Alle", description="Tagesart Filter")):
+def get_umlaeufe_summary(tagesart: Optional[str] = Query("Alle", description="Tagesart Filter"), x_scenario: str = Header("strategic")):
     """Returns aggregated KPIs for all Umläufe."""
     try:
-        conn = get_db()
+        conn = get_db(x_scenario)
         
         where_clause = "WHERE s.umlauf_id IS NOT NULL AND s.umlauf_id != 0"
         if tagesart and tagesart != "Alle":
@@ -88,11 +88,12 @@ def get_umlaeufe_list(
     size: int = Query(50, ge=1, le=1000),
     sort_by: str = Query("umlauf_id", description="Field to sort by"),
     sort_desc: bool = Query(False, description="Sort descending"),
-    tagesart: Optional[str] = Query("Alle", description="Tagesart Filter")
+    tagesart: Optional[str] = Query("Alle", description="Tagesart Filter"),
+    x_scenario: str = Header("strategic")
 ):
     """Returns a list of all Umläufe with their details."""
     try:
-        conn = get_db()
+        conn = get_db(x_scenario)
         
         # Valid sort fields to prevent SQL injection
         valid_sort_fields = {
@@ -193,9 +194,9 @@ class ChartStats(BaseModel):
     anzahl_fahrten: int
 
 @router.get("/gantt", response_model=List[GanttUmlauf])
-def get_umlaeufe_gantt(day_type: Optional[str] = Query("Alle", description="Tagesart Filter"), limit: int = Query(50, ge=1, le=500)):
+def get_umlaeufe_gantt(day_type: Optional[str] = Query("Alle", description="Tagesart Filter"), limit: int = Query(50, ge=1, le=500), x_scenario: str = Header("strategic")):
     try:
-        conn = get_db()
+        conn = get_db(x_scenario)
         
         where_clause = "WHERE s.umlauf_id IS NOT NULL AND s.umlauf_id != 0"
         if day_type and day_type != "Alle":
@@ -257,9 +258,9 @@ def get_umlaeufe_gantt(day_type: Optional[str] = Query("Alle", description="Tage
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/active_vehicles", response_model=List[ActiveVehiclePoint])
-def get_active_vehicles(day_type: Optional[str] = Query("Alle", description="Tagesart Filter")):
+def get_active_vehicles(day_type: Optional[str] = Query("Alle", description="Tagesart Filter"), x_scenario: str = Header("strategic")):
     try:
-        conn = get_db()
+        conn = get_db(x_scenario)
         
         where_clause = "WHERE s.umlauf_id IS NOT NULL AND s.umlauf_id != 0"
         if day_type and day_type != "Alle":
@@ -300,9 +301,9 @@ def get_active_vehicles(day_type: Optional[str] = Query("Alle", description="Tag
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/charts_stats", response_model=List[ChartStats])
-def get_charts_stats(day_type: Optional[str] = Query("Alle", description="Tagesart Filter")):
+def get_charts_stats(day_type: Optional[str] = Query("Alle", description="Tagesart Filter"), x_scenario: str = Header("strategic")):
     try:
-        conn = get_db()
+        conn = get_db(x_scenario)
         
         where_clause = "WHERE s.umlauf_id IS NOT NULL AND s.umlauf_id != 0"
         if day_type and day_type != "Alle":

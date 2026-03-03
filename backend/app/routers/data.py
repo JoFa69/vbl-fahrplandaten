@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, File, UploadFile
+from fastapi import APIRouter, HTTPException, File, UploadFile, Header
 import shutil
 import os
 import duckdb
@@ -8,8 +8,8 @@ from ..database import get_db
 router = APIRouter()
 
 @router.get("/lines")
-def get_lines():
-    con = get_db()
+def get_lines(x_scenario: str = Header("strategic")):
+    con = get_db(x_scenario)
     try:
         query = "SELECT DISTINCT li_no, li_text FROM dim_line ORDER BY li_no"
         result = con.execute(query).fetchall()
@@ -18,13 +18,12 @@ def get_lines():
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/lines/{line_no}/stops")
-def get_line_stops(line_no: str):
-    con = get_db()
+def get_line_stops(line_no: str, x_scenario: str = Header("strategic")):
+    con = get_db(x_scenario)
     try:
-        # Join cub_schedule, dim_line, dim_ort to find stops for the line
-        # Use DISTINCT to avoid duplicates
+        # Also return the split names in /lines/{line_no}/stops
         query = f"""
-            SELECT DISTINCT s.stop_id, s.stop_text
+            SELECT DISTINCT s.stop_id, s.stop_text, s.stop_ort, s.stop_name
             FROM cub_schedule c
             JOIN dim_line l ON c.li_id = l.li_id
             JOIN dim_ort s ON c.start_stop_id = s.stop_id
@@ -40,7 +39,7 @@ def get_line_stops(line_no: str):
                 raise HTTPException(status_code=404, detail="Line not found")
             return [] # Line exists but no stops found (unlikely for valid schedule)
 
-        return [{"stop_id": row[0], "stop_name": row[1]} for row in result]
+        return [{"stop_id": row[0], "stop_name": row[1], "stop_ort": row[2], "clean_stop_name": row[3]} for row in result]
     except HTTPException:
         raise
     except Exception as e:
@@ -49,13 +48,18 @@ def get_line_stops(line_no: str):
 
 
 @router.get("/stops")
-def get_stops(tagesart: str = None):
-    con = get_db()
+def get_stops(tagesart: str = None, ort: str = None, x_scenario: str = Header("strategic")):
+    con = get_db(x_scenario)
     try:
         # Determine the filtering and averaging logic
-        where_clause = ""
+        where_clause = "WHERE 1=1"
         if tagesart and tagesart != "Alle":
-            where_clause = f"WHERE d.tagesart_abbr = '{tagesart}'"
+            where_clause += f" AND d.tagesart_abbr = '{tagesart}'"
+            
+        ort_filter = ""
+        if ort:
+            # We will use this in the unique_stops CTE
+            ort_filter = f" AND stop_ort = '{ort}'"
 
         # Get all stops with coordinates, plus real frequency and line count
         # Frequency is calculated as average daily trips (total trips / distinct days)
@@ -75,16 +79,20 @@ def get_stops(tagesart: str = None):
             unique_stops AS (
                 SELECT 
                     stop_abbr, 
-                    MAX(stop_point_text) as stop_name, 
+                    MAX(stop_point_text) as full_stop_name, 
+                    MAX(stop_ort) as stop_ort,
+                    MAX(stop_name) as clean_stop_name,
                     MAX(lat) as lat, 
                     MAX(lon) as lon 
                 FROM dim_ort 
-                WHERE lat IS NOT NULL AND lon IS NOT NULL
+                WHERE lat IS NOT NULL AND lon IS NOT NULL {ort_filter}
                 GROUP BY stop_abbr
             )
             SELECT 
                 u.stop_abbr as stop_id,
-                COALESCE(u.stop_name, u.stop_abbr) as stop_name,
+                COALESCE(u.full_stop_name, u.stop_abbr) as stop_name,
+                u.stop_ort,
+                u.clean_stop_name,
                 COALESCE(CAST(ROUND(st.avg_daily_trips) AS INTEGER), 0) as frequency,
                 COALESCE(st.num_lines, 0) as lines,
                 u.lat,
@@ -94,14 +102,18 @@ def get_stops(tagesart: str = None):
             ORDER BY st.avg_daily_trips DESC NULLS LAST
         """
         result = con.execute(query).fetchall()
+        # Note: If an 'ort' filter is applied and a stop doesn't match, it gets excluded via INNER JOIN or left out of unique_stops
+        # But st.avg_daily_trips is computed for all. By using LEFT JOIN from unique_stops, we only return the matched ones!
         return [
             {
                 "stop_id": row[0], 
                 "stop_name": row[1], 
-                "frequency": row[2],
-                "lines": row[3],
-                "lat": row[4], 
-                "lon": row[5]
+                "stop_ort": row[2],
+                "clean_stop_name": row[3],
+                "frequency": row[4],
+                "lines": row[5],
+                "lat": row[6], 
+                "lon": row[7]
             } for row in result
         ]
     except Exception as e:
@@ -109,14 +121,14 @@ def get_stops(tagesart: str = None):
 
 
 @router.get("/tables")
-def get_tables():
-    con = get_db()
+def get_tables(x_scenario: str = Header("strategic")):
+    con = get_db(x_scenario)
     tables = [x[0] for x in con.execute("SHOW TABLES").fetchall()]
     return {"tables": tables}
 
 @router.get("/table/{table_name}")
-def get_table_data(table_name: str, limit: int = 100, offset: int = 0):
-    con = get_db()
+def get_table_data(table_name: str, limit: int = 100, offset: int = 0, x_scenario: str = Header("strategic")):
+    con = get_db(x_scenario)
     
     # Sanitize table name (simple check)
     tables = [x[0] for x in con.execute("SHOW TABLES").fetchall()]
@@ -145,8 +157,8 @@ def get_table_data(table_name: str, limit: int = 100, offset: int = 0):
     }
 
 @router.get("/stats")
-def get_stats():
-    con = get_db()
+def get_stats(x_scenario: str = Header("strategic")):
+    con = get_db(x_scenario)
     tables = [x[0] for x in con.execute("SHOW TABLES").fetchall()]
     stats = []
     for t in tables:
@@ -301,8 +313,8 @@ def get_raw_file_preview(filename: str, limit: int = 50, offset: int = 0):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/lines/{line_no}/variants")
-def get_line_variants(line_no: str, direction_id: int = 1):
-    con = get_db()
+def get_line_variants(line_no: str, direction_id: int = 1, x_scenario: str = Header("strategic")):
+    con = get_db(x_scenario)
     try:
         # Get all distinct variants (routes) for a line and direction
         # with their stop sequences and trip counts

@@ -4,12 +4,14 @@ import { NavLink, useLocation } from 'react-router-dom';
 const navItems = [
     { to: '/', icon: 'dashboard', label: 'Übersicht' },
     { to: '/daten', icon: 'database', label: 'Daten-Manager' },
-    { to: '/netz', icon: 'map', label: 'Netz' },
+    { to: '/netz', icon: 'map', label: 'Netz-Geometrie' },
+    { to: '/netz/plan', icon: 'account_tree', label: 'Netzplan (Topologie)' },
     { to: '/netz/auslastung', icon: 'layers', label: 'Netz-Auslastung' },
     { to: '/fahrplan', icon: 'calendar_month', label: 'Fahrplan & Frequenz' },
     { to: '/haltestellen', icon: 'location_on', label: 'Haltestellen' },
     { to: '/haltestellen/charts', icon: 'monitoring', label: 'Haltestellen-Charts' },
     { to: '/vergleich', icon: 'compare_arrows', label: 'Fahrplan-Vergleich' },
+    { to: '/korridor', icon: 'timeline', label: 'Korridor-Analyse' },
     { to: '/umlaeufe', icon: 'loop', label: 'Umläufe' },
     { to: '/umlaeufe/charts', icon: 'insert_chart', label: 'Umlauf-Charts' },
 ];

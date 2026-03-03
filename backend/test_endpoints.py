@@ -1,49 +1,45 @@
-import requests
-import os
+import duckdb
 
-BASE_URL = "http://localhost:8081/api"
+try:
+    con = duckdb.connect("data/vdv_schedule.duckdb", read_only=True)
+    print("Verbindung erfolgreich.")
+except Exception as e:
+    print(f"Fehler bei Verbindung: {e}")
 
-def test_analytics():
-    print("Testing Analytics Endpoints...")
-    endpoints = ["analytics/stats", "analytics/stops-by-line", "analytics/trips-per-hour"]
-    for ep in endpoints:
-        try:
-            res = requests.get(f"{BASE_URL}/{ep}")
-            if res.status_code == 200:
-                print(f"[OK] {ep}")
-                # print(res.json())
-            else:
-                print(f"[FAIL] {ep}: Failed ({res.status_code}) - {res.text}")
-        except Exception as e:
-            print(f"[ERROR] {ep}: {e}")
+print("--- Check tables ---")
+print(con.execute("SHOW TABLES").fetchall())
 
-def test_ai():
-    print("\nTesting AI Endpoint...")
-    # This might fail if GOOGLE_API_KEY is not set in the backend process
-    question = "Wie viele Linien gibt es?"
-    try:
-        res = requests.post(f"{BASE_URL}/ai/ask", json={"question": question})
-        if res.status_code == 200:
-            print(f"[OK] AI Ask")
-            print(f"Response: {res.json().get('answer')}")
-            print(f"SQL: {res.json().get('sql')}")
-        else:
-            print(f"[FAIL] AI Ask: Failed ({res.status_code}) - {res.text}")
-            print("NOTE: This is expected if GOOGLE_API_KEY is not set.")
-    except Exception as e:
-        print(f"[ERROR] AI Ask: {e}")
+print("--- Heatmap Query ---")
+query_heatmap = """
+    SELECT 
+        l.li_no,
+        CAST(s.frt_start / 3600 AS INTEGER) as hour,
+        s.tagesart_nr as tagesart,
+        l.li_ri_no as direction,
+        COUNT(DISTINCT s.frt_id) as trip_count
+    FROM cub_schedule s
+    JOIN dim_line l ON s.li_id = l.li_id
+    WHERE l.li_no = '1'
+    GROUP BY 1, 2, 3, 4
+    ORDER BY hour
+    LIMIT 5
+"""
+try:
+    print(con.execute(query_heatmap).fetchall())
+except Exception as e:
+    print(f"Fehler bei Heatmap Query: {e}")
 
-def test_root():
-    print("\nTesting Root Endpoint...")
-    try:
-        res = requests.get(f"http://localhost:8081/")
-        print(f"Status: {res.status_code}")
-        print(f"Headers: {res.headers}")
-        print(f"Content: {res.text}")
-    except Exception as e:
-        print(f"[ERROR] Root: {e}")
-
-if __name__ == "__main__":
-    test_root()
-    test_analytics()
-    test_ai()
+print("--- KPIs Query ---")
+query_kpi = """
+    SELECT 
+        MIN(s.frt_start) as first_trip_sec,
+        MAX(s.frt_start) as last_trip_sec,
+        COUNT(DISTINCT s.frt_id) as total_trips
+    FROM cub_schedule s
+    JOIN dim_line l ON s.li_id = l.li_id
+    WHERE l.li_no = '1'
+"""
+try:
+    print(con.execute(query_kpi).fetchall())
+except Exception as e:
+    print(f"Fehler bei KPI Query: {e}")
