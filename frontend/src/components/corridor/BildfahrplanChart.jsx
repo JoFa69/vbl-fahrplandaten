@@ -206,10 +206,21 @@ export default function BildfahrplanChart({ startStopId, endStopId, tagesart, sh
     };
 
     const toggleAll = () => {
-        if (hiddenLines?.size > 0) {
-            setHiddenLines?.(new Set()); // Show all
+        const visibleCount = availableLines.filter(l => !hiddenLines?.has(String(l))).length;
+        if (visibleCount < availableLines.length) {
+            // Show all current lines
+            setHiddenLines?.(prev => {
+                const next = new Set(prev);
+                availableLines.forEach(l => next.delete(String(l)));
+                return next;
+            });
         } else {
-            setHiddenLines?.(new Set(availableLines)); // Hide all
+            // Hide all current lines
+            setHiddenLines?.(prev => {
+                const next = new Set(prev);
+                availableLines.forEach(l => next.add(String(l)));
+                return next;
+            });
         }
     };
 
@@ -257,17 +268,17 @@ export default function BildfahrplanChart({ startStopId, endStopId, tagesart, sh
         });
     }, [filteredTrips, stopsDict]);
 
-    // Compute brushData from filtered trips
+    // Compute brushData from ALL trips so the timeline stays stable when filtering
     const brushData = useMemo(() => {
-        if (filteredTrips.length === 0) return [];
+        if (trips.length === 0) return [];
         const allIntervals = new Set();
-        filteredTrips.forEach(trip => {
+        trips.forEach(trip => {
             trip.points.forEach(p => {
                 if (p.abfahrt != null) allIntervals.add(p.abfahrt);
             });
         });
         return Array.from(allIntervals).sort((a, b) => a - b).map(val => ({ x: val }));
-    }, [filteredTrips]);
+    }, [trips]);
 
     // Reset brush when data changes
     useEffect(() => {

@@ -151,10 +151,21 @@ export default function MatrixChart({ stopId, tagesart, richtung, showDepotRuns 
     };
 
     const toggleAll = () => {
-        if (hiddenLines.size > 0) {
-            setHiddenLines(new Set()); // Show all
+        const visibleCount = availableLines.filter(l => !hiddenLines?.has(String(l))).length;
+        if (visibleCount < availableLines.length) {
+            // Show all current lines
+            setHiddenLines?.(prev => {
+                const next = new Set(prev);
+                availableLines.forEach(l => next.delete(String(l)));
+                return next;
+            });
         } else {
-            setHiddenLines(new Set(availableLines)); // Hide all
+            // Hide all current lines
+            setHiddenLines?.(prev => {
+                const next = new Set(prev);
+                availableLines.forEach(l => next.add(String(l)));
+                return next;
+            });
         }
     };
 
