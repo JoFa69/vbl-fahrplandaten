@@ -213,6 +213,50 @@ export default function BildfahrplanChart({ startStopId, endStopId, tagesart, sh
         }
     };
 
+    // Pre-calculate line data to avoid re-calculating inside render loop
+    const memoizedLines = useMemo(() => {
+        return filteredTrips.map((trip) => {
+            const lineData = trip.points
+                .filter(p => {
+                    const key = p.stop_abbr || p.stop_id;
+                    return stopsDict[key] !== undefined;
+                })
+                .map(p => {
+                    const key = p.stop_abbr || p.stop_id;
+                    return {
+                        x: p.abfahrt,
+                        y: stopsDict[key].index,
+                        li_no: trip.li_no,
+                        is_depot_run: trip.is_depot_run,
+                        stop_text: p.stop_text,
+                        schedule_id: trip.schedule_id,
+                        richtung: trip.richtung,
+                        fahrt_start: trip.fahrt_start,
+                        fahrt_end: trip.fahrt_end,
+                        korridor_fahrzeit: trip.korridor_fahrzeit
+                    };
+                });
+
+            return (
+                <Line
+                    key={trip.schedule_id}
+                    type="linear"
+                    name={`Linie ${trip.li_no}${trip.is_depot_run ? ' (Depot)' : ''}`}
+                    data={lineData}
+                    dataKey="y"
+                    stroke={getColorForLine(trip.li_no)}
+                    strokeWidth={trip.is_depot_run ? 1.0 : 1.5}
+                    strokeDasharray={trip.is_depot_run ? "5 5" : "0"}
+                    // Performance fix: Do not draw static SVG circles for every point on every line
+                    dot={false}
+                    activeDot={{ r: 6, strokeWidth: 2, stroke: '#111318' }}
+                    opacity={trip.is_depot_run ? 0.6 : 0.9}
+                    isAnimationActive={false}
+                />
+            );
+        });
+    }, [filteredTrips, stopsDict]);
+
     // Compute brushData from filtered trips
     const brushData = useMemo(() => {
         if (filteredTrips.length === 0) return [];
@@ -425,47 +469,8 @@ export default function BildfahrplanChart({ startStopId, endStopId, tagesart, sh
                         {/* Use shared=false so the tooltip applies specifically to the hovered line */}
                         <Tooltip content={<CustomTooltip />} cursor={{ strokeDasharray: '3 3' }} shared={false} />
 
-                        {filteredTrips.map((trip) => {
-                            const lineData = trip.points
-                                .filter(p => {
-                                    const key = p.stop_abbr || p.stop_id;
-                                    return stopsDict[key] !== undefined;
-                                })
-                                .map(p => {
-                                    const key = p.stop_abbr || p.stop_id;
-                                    return {
-                                        x: p.abfahrt,
-                                        y: stopsDict[key].index,
-                                        li_no: trip.li_no,
-                                        is_depot_run: trip.is_depot_run,
-                                        stop_text: p.stop_text,
-                                        schedule_id: trip.schedule_id,
-                                        richtung: trip.richtung,
-                                        fahrt_start: trip.fahrt_start,
-                                        fahrt_end: trip.fahrt_end,
-                                        korridor_fahrzeit: trip.korridor_fahrzeit
-                                    };
-                                });
-
-                            // Using Line instead of Scatter for easier hovering mechanics
-                            // The line interpolation makes the entire trip path a hover target.
-                            return (
-                                <Line
-                                    key={trip.schedule_id}
-                                    type="linear"
-                                    name={`Linie ${trip.li_no}${trip.is_depot_run ? ' (Depot)' : ''}`}
-                                    data={lineData}
-                                    dataKey="y"
-                                    stroke={getColorForLine(trip.li_no)}
-                                    strokeWidth={trip.is_depot_run ? 1.0 : 1.5}
-                                    strokeDasharray={trip.is_depot_run ? "5 5" : "0"}
-                                    dot={{ r: 2.5, fill: getColorForLine(trip.li_no), strokeWidth: 0, opacity: trip.is_depot_run ? 0.6 : 1.0 }}
-                                    activeDot={{ r: 6, strokeWidth: 2, stroke: '#111318' }}
-                                    opacity={trip.is_depot_run ? 0.6 : 0.9}
-                                    isAnimationActive={false}
-                                />
-                            );
-                        })}
+                        {/* Render purely memoized objects to prevent complete Recharts freeze */}
+                        {memoizedLines}
 
                         <Brush
                             dataKey="x"
