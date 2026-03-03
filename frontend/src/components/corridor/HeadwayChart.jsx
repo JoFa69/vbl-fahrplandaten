@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { fetchCorridorHeadway } from '../../api';
 import {
-    ComposedChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Brush, ReferenceArea, Cell
+    ComposedChart, Scatter, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+    Brush, ReferenceArea, ReferenceLine, Cell
 } from 'recharts';
 
 // Custom Tooltip for Headway Chart
@@ -12,7 +13,7 @@ const CustomTooltip = ({ active, payload, label }) => {
             <div className="bg-[#111318]/95 backdrop-blur-md border border-border-dark p-4 rounded-xl shadow-xl shadow-black">
                 <p className="text-white font-bold mb-1 flex items-center gap-2">
                     <span className="material-symbols-outlined text-sm text-primary">schedule</span>
-                    {label} Uhr
+                    {data.time_label} Uhr
                 </p>
                 <div className="flex flex-col gap-1 mt-3">
                     <div className="flex justify-between items-center gap-4">
@@ -21,6 +22,14 @@ const CustomTooltip = ({ active, payload, label }) => {
                             {data.headway_minutes} Min
                         </span>
                     </div>
+                    {data.ma5 != null && (
+                        <div className="flex justify-between items-center gap-4">
+                            <span className="text-slate-400 text-xs">Ø Gleitender Durchschnitt:</span>
+                            <span className="text-amber-400 font-mono font-bold text-sm bg-amber-500/10 px-2 rounded">
+                                {data.ma5.toFixed(1)} Min
+                            </span>
+                        </div>
+                    )}
                     <div className="flex justify-between items-center gap-4 mt-1 border-t border-border-dark pt-2">
                         <span className="text-slate-400 text-xs">Gehört zu Linie:</span>
                         <span className="bg-primary/20 text-primary px-2 py-0.5 rounded text-xs font-bold border border-primary/30">
@@ -34,13 +43,9 @@ const CustomTooltip = ({ active, payload, label }) => {
     return null;
 };
 
-export default function HeadwayChart({ stopId, tagesart, richtung, showDepotRuns = true }) {
+export default function HeadwayChart({ stopId, tagesart, richtung, showDepotRuns = true, targetHeadway = 10, tolerance = 2 }) {
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(false);
-
-    // Target corridor states
-    const [targetHeadway, setTargetHeadway] = useState(10);
-    const [tolerance, setTolerance] = useState(2);
 
     useEffect(() => {
         if (!stopId) return;
@@ -49,19 +54,15 @@ export default function HeadwayChart({ stopId, tagesart, richtung, showDepotRuns
             setLoading(true);
             try {
                 const res = await fetchCorridorHeadway(stopId, tagesart, richtung);
-                // raw response format: [{ time_label: "06:40", std: 6, h_min: 40, li_no: "20", headway_minutes: 8 }, ...]
-
                 let safeData = res || [];
 
                 if (!showDepotRuns) {
                     safeData = safeData.filter(d => !d.is_depot_run);
-                    // Recalculate headways since gaps between buses have changed!
                     for (let i = 1; i < safeData.length; i++) {
                         safeData[i].headway_minutes = Math.floor((safeData[i].abfahrt - safeData[i - 1].abfahrt) / 60);
                     }
                 }
 
-                // Let's filter out ridiculous headways (e.g. over 120 minutes, like first bus of the day vs last of yesterday)
                 safeData = safeData.filter(d => d.headway_minutes != null && d.headway_minutes >= 0 && d.headway_minutes <= 120);
 
                 setData(safeData);
@@ -73,6 +74,19 @@ export default function HeadwayChart({ stopId, tagesart, richtung, showDepotRuns
         }
         load();
     }, [stopId, tagesart, richtung, showDepotRuns]);
+
+    // Compute moving average (window 5)
+    const enrichedData = useMemo(() => {
+        if (data.length === 0) return [];
+        const windowSize = 5;
+        return data.map((d, i) => {
+            const start = Math.max(0, i - Math.floor(windowSize / 2));
+            const end = Math.min(data.length, i + Math.floor(windowSize / 2) + 1);
+            const slice = data.slice(start, end);
+            const avg = slice.reduce((s, v) => s + v.headway_minutes, 0) / slice.length;
+            return { ...d, ma5: avg };
+        });
+    }, [data]);
 
     if (!stopId) return null;
 
@@ -94,35 +108,9 @@ export default function HeadwayChart({ stopId, tagesart, richtung, showDepotRuns
 
     return (
         <div className="h-full flex flex-col">
-            {/* Controls for Target Corridor */}
-            <div className="flex justify-end items-center gap-4 mb-2">
-                <div className="flex items-center gap-2">
-                    <label className="text-xs text-slate-400">Soll-Takt (Min):</label>
-                    <input
-                        type="number"
-                        min="1"
-                        max="60"
-                        value={targetHeadway}
-                        onChange={(e) => setTargetHeadway(Number(e.target.value))}
-                        className="bg-surface border border-border-dark rounded px-2 py-1 text-xs text-white w-16 outline-none focus:border-primary"
-                    />
-                </div>
-                <div className="flex items-center gap-2">
-                    <label className="text-xs text-slate-400">Toleranz (± Min):</label>
-                    <input
-                        type="number"
-                        min="0"
-                        max="30"
-                        value={tolerance}
-                        onChange={(e) => setTolerance(Number(e.target.value))}
-                        className="bg-surface border border-border-dark rounded px-2 py-1 text-xs text-white w-16 outline-none focus:border-primary"
-                    />
-                </div>
-            </div>
-
             <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart
-                    data={data}
+                    data={enrichedData}
                     margin={{ top: 20, right: 30, left: 0, bottom: 20 }}
                 >
                     <CartesianGrid strokeDasharray="3 3" stroke="#374151" vertical={false} />
@@ -132,17 +120,23 @@ export default function HeadwayChart({ stopId, tagesart, richtung, showDepotRuns
                         y1={Math.max(0, targetHeadway - tolerance)}
                         y2={targetHeadway + tolerance}
                         fill="#10B981"
-                        fillOpacity={0.15}
+                        fillOpacity={0.12}
                         strokeOpacity={0}
                     />
 
-                    {/* Target Line */}
-                    <ReferenceArea
-                        y1={targetHeadway}
-                        y2={targetHeadway}
+                    {/* Soll-Takt Reference Line (gestrichelt) */}
+                    <ReferenceLine
+                        y={targetHeadway}
                         stroke="#10B981"
-                        strokeDasharray="3 3"
-                        strokeOpacity={0.6}
+                        strokeDasharray="6 4"
+                        strokeWidth={2}
+                        label={{
+                            value: `Soll: ${targetHeadway} Min`,
+                            position: 'right',
+                            fill: '#10B981',
+                            fontSize: 11,
+                            fontWeight: 'bold'
+                        }}
                     />
 
                     <XAxis
@@ -161,13 +155,26 @@ export default function HeadwayChart({ stopId, tagesart, richtung, showDepotRuns
 
                     <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#4B5563', strokeWidth: 1, strokeDasharray: '4 4' }} />
 
-                    <Scatter dataKey="headway_minutes">
-                        {data.map((entry, index) => {
+                    {/* Moving Average Line (smooth trend) */}
+                    <Line
+                        type="monotone"
+                        dataKey="ma5"
+                        stroke="#FBBF24"
+                        strokeWidth={2}
+                        dot={false}
+                        name="Ø Gleitender Durchschnitt"
+                        strokeOpacity={0.8}
+                    />
+
+                    {/* Actual data points as colored dots */}
+                    <Scatter dataKey="headway_minutes" name="Taktzeit">
+                        {enrichedData.map((entry, index) => {
                             const isOutside = Math.abs(entry.headway_minutes - targetHeadway) > tolerance;
                             return (
                                 <Cell
                                     key={`cell-${index}`}
                                     fill={isOutside ? '#EF4444' : '#10B981'}
+                                    r={3}
                                 />
                             );
                         })}
