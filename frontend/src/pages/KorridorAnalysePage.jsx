@@ -29,6 +29,8 @@ export default function KorridorAnalysePage() {
     // Start/End for Bildfahrplan
     const [startStopId, setStartStopId] = useLocalStorage("korridorStartStopId", "");
     const [endStopId, setEndStopId] = useLocalStorage("korridorEndStopId", "");
+    const [timeFrom, setTimeFrom] = useLocalStorage("korridorTimeFrom", "");
+    const [timeTo, setTimeTo] = useLocalStorage("korridorTimeTo", "");
 
     // Takt-Qualität controls (shared across Section C)
     const [targetHeadway, setTargetHeadway] = useLocalStorage("korridorTargetHeadway", 10);
@@ -212,6 +214,10 @@ export default function KorridorAnalysePage() {
                                 showDepotRuns={showDepotRuns}
                                 hiddenLines={hiddenLines}
                                 setHiddenLines={setHiddenLines}
+                                globalTimeFrom={timeFrom}
+                                setGlobalTimeFrom={setTimeFrom}
+                                globalTimeTo={timeTo}
+                                setGlobalTimeTo={setTimeTo}
                             />
                         </div>
                     </div>

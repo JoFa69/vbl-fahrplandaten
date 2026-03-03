@@ -104,7 +104,18 @@ const CustomTooltip = ({ active, payload }) => {
     return null;
 };
 
-export default function BildfahrplanChart({ startStopId, endStopId, tagesart, showDepotRuns = true, hiddenLines, setHiddenLines }) {
+export default function BildfahrplanChart({
+    startStopId,
+    endStopId,
+    tagesart,
+    showDepotRuns = true,
+    hiddenLines,
+    setHiddenLines,
+    globalTimeFrom,
+    setGlobalTimeFrom,
+    globalTimeTo,
+    setGlobalTimeTo
+}) {
     // === ALL HOOKS BEFORE EARLY RETURNS ===
     const [trips, setTrips] = useState([]);
     const [stopsDict, setStopsDict] = useState({});
@@ -112,8 +123,6 @@ export default function BildfahrplanChart({ startStopId, endStopId, tagesart, sh
 
     // Controls state
     const [brushIndex, setBrushIndex] = useState({ startIndex: 0, endIndex: 0 });
-    const [timeFrom, setTimeFrom] = useState('');
-    const [timeTo, setTimeTo] = useState('');
 
     // Line Filter state (now managed globally via hiddenLines)
     const [availableLines, setAvailableLines] = useState([]);
@@ -268,26 +277,78 @@ export default function BildfahrplanChart({ startStopId, endStopId, tagesart, sh
         });
     }, [filteredTrips, stopsDict]);
 
-    // Compute brushData from ALL trips so the timeline stays stable when filtering
+    // Generate fixed 1-minute intervals for brush axis (Performance Optimization)
     const brushData = useMemo(() => {
         if (trips.length === 0) return [];
-        const allIntervals = new Set();
+
+        let minTime = Infinity;
+        let maxTime = -Infinity;
+
         trips.forEach(trip => {
             trip.points.forEach(p => {
-                if (p.abfahrt != null) allIntervals.add(p.abfahrt);
+                if (p.abfahrt != null) {
+                    if (p.abfahrt < minTime) minTime = p.abfahrt;
+                    if (p.abfahrt > maxTime) maxTime = p.abfahrt;
+                }
             });
         });
-        return Array.from(allIntervals).sort((a, b) => a - b).map(val => ({ x: val }));
+
+        if (minTime === Infinity || maxTime === -Infinity) return [];
+
+        // Floor to nearest minute for clean start
+        let current = Math.floor(minTime / 60) * 60;
+        const end = Math.ceil(maxTime / 60) * 60;
+
+        const intervals = [];
+        while (current <= end) {
+            intervals.push({ x: current });
+            current += 60; // 1-minute steps
+        }
+
+        return intervals;
     }, [trips]);
 
-    // Reset brush when data changes
+    // Setup brush limits based on new data or existing global time
     useEffect(() => {
         if (brushData.length > 0) {
-            setBrushIndex({ startIndex: 0, endIndex: brushData.length - 1 });
-            setTimeFrom(formatSeconds(brushData[0].x));
-            setTimeTo(formatSeconds(brushData[brushData.length - 1].x));
+            if (!globalTimeFrom && !globalTimeTo) {
+                // Initial load: Set to full spectrum if no persistent time selected
+                setBrushIndex({ startIndex: 0, endIndex: brushData.length - 1 });
+                setGlobalTimeFrom?.(formatSeconds(brushData[0].x));
+                setGlobalTimeTo?.(formatSeconds(brushData[brushData.length - 1].x));
+            } else {
+                // Restore persistent zoom from localStorage strings
+                let startIdx = 0;
+                let endIdx = brushData.length - 1;
+
+                if (globalTimeFrom) {
+                    const secFrom = parseTimeToSeconds(globalTimeFrom);
+                    if (secFrom != null) {
+                        let bestIdx = 0;
+                        let bestDiff = Infinity;
+                        brushData.forEach((d, i) => {
+                            const diff = Math.abs(d.x - secFrom);
+                            if (diff < bestDiff) { bestDiff = diff; bestIdx = i; }
+                        });
+                        startIdx = bestIdx;
+                    }
+                }
+                if (globalTimeTo) {
+                    const secTo = parseTimeToSeconds(globalTimeTo);
+                    if (secTo != null) {
+                        let bestIdx = brushData.length - 1;
+                        let bestDiff = Infinity;
+                        brushData.forEach((d, i) => {
+                            const diff = Math.abs(d.x - secTo);
+                            if (diff < bestDiff) { bestDiff = diff; bestIdx = i; }
+                        });
+                        endIdx = bestIdx;
+                    }
+                }
+                setBrushIndex({ startIndex: startIdx, endIndex: endIdx });
+            }
         }
-    }, [brushData]); // trigger on brushData instead of trips to handle filtering automatically
+    }, [brushData, globalTimeFrom, globalTimeTo, setGlobalTimeFrom, setGlobalTimeTo]);
 
     // Compute zoom domain
     const zoomDomain = useMemo(() => {
@@ -319,35 +380,23 @@ export default function BildfahrplanChart({ startStopId, endStopId, tagesart, sh
                 if (prev.startIndex === e.startIndex && prev.endIndex === e.endIndex) return prev;
                 return { startIndex: e.startIndex, endIndex: e.endIndex };
             });
-            // Sync time fields
+            // Sync time fields globally
             if (brushData.length > 0) {
                 const si = Math.min(e.startIndex, brushData.length - 1);
                 const ei = Math.min(e.endIndex, brushData.length - 1);
-                if (brushData[si]) setTimeFrom(formatSeconds(brushData[si].x));
-                if (brushData[ei]) setTimeTo(formatSeconds(brushData[ei].x));
+                if (brushData[si]) setGlobalTimeFrom?.(formatSeconds(brushData[si].x));
+                if (brushData[ei]) setGlobalTimeTo?.(formatSeconds(brushData[ei].x));
             }
         }
-    }, [brushData]);
+    }, [brushData, setGlobalTimeFrom, setGlobalTimeTo]);
 
-    // Handle manual time input
+    // Handle manual time input from UI fields
     const handleTimeFromChange = useCallback((value) => {
-        setTimeFrom(value);
-        const sec = parseTimeToSeconds(value);
-        if (sec != null && brushData.length > 0) {
-            // Find nearest index
-            let bestIdx = 0;
-            let bestDiff = Infinity;
-            brushData.forEach((d, i) => {
-                const diff = Math.abs(d.x - sec);
-                if (diff < bestDiff) { bestDiff = diff; bestIdx = i; }
-            });
-            setBrushIndex(prev => ({ ...prev, startIndex: bestIdx }));
-        }
-    }, [brushData]);
+        setGlobalTimeFrom?.(value);
+    }, [setGlobalTimeFrom]);
 
     const handleTimeToChange = useCallback((value) => {
-        setTimeTo(value);
-        const sec = parseTimeToSeconds(value);
+        setGlobalTimeTo?.(value);
         if (sec != null && brushData.length > 0) {
             let bestIdx = brushData.length - 1;
             let bestDiff = Infinity;
@@ -396,7 +445,7 @@ export default function BildfahrplanChart({ startStopId, endStopId, tagesart, sh
                         <label className="text-xs text-slate-400">Von:</label>
                         <input
                             type="time"
-                            value={timeFrom}
+                            value={globalTimeFrom || ''}
                             onChange={(e) => handleTimeFromChange(e.target.value)}
                             className="bg-transparent text-xs text-white w-20 outline-none font-mono"
                         />
@@ -406,7 +455,7 @@ export default function BildfahrplanChart({ startStopId, endStopId, tagesart, sh
                         <label className="text-xs text-slate-400">Bis:</label>
                         <input
                             type="time"
-                            value={timeTo}
+                            value={globalTimeTo || ''}
                             onChange={(e) => handleTimeToChange(e.target.value)}
                             className="bg-transparent text-xs text-white w-20 outline-none font-mono"
                         />
