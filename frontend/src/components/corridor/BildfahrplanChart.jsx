@@ -104,7 +104,7 @@ const CustomTooltip = ({ active, payload }) => {
     return null;
 };
 
-export default function BildfahrplanChart({ startStopId, endStopId, tagesart, showDepotRuns = true }) {
+export default function BildfahrplanChart({ startStopId, endStopId, tagesart, showDepotRuns = true, hiddenLines, setHiddenLines }) {
     // === ALL HOOKS BEFORE EARLY RETURNS ===
     const [trips, setTrips] = useState([]);
     const [stopsDict, setStopsDict] = useState({});
@@ -115,9 +115,8 @@ export default function BildfahrplanChart({ startStopId, endStopId, tagesart, sh
     const [timeFrom, setTimeFrom] = useState('');
     const [timeTo, setTimeTo] = useState('');
 
-    // Line Filter state
+    // Line Filter state (now managed globally via hiddenLines)
     const [availableLines, setAvailableLines] = useState([]);
-    const [selectedLine, setSelectedLine] = useState('');
 
     useEffect(() => {
         if (!startStopId || !endStopId) return;
@@ -135,10 +134,6 @@ export default function BildfahrplanChart({ startStopId, endStopId, tagesart, sh
                 // Extract unique lines for filter
                 const uniqueLines = Array.from(new Set(fetchedTrips.map(t => String(t.li_no)))).sort();
                 setAvailableLines(uniqueLines);
-                // Reset selected line if it's no longer available for this corridor
-                if (selectedLine && !uniqueLines.includes(selectedLine)) {
-                    setSelectedLine('');
-                }
 
                 // Calculate total korridor_fahrzeit for each trip
                 fetchedTrips.forEach(t => {
@@ -194,9 +189,29 @@ export default function BildfahrplanChart({ startStopId, endStopId, tagesart, sh
 
     // Apply Line Filter
     const filteredTrips = useMemo(() => {
-        if (!selectedLine || selectedLine === '') return trips;
-        return trips.filter(t => String(t.li_no) === selectedLine);
-    }, [trips, selectedLine]);
+        if (!hiddenLines) return trips;
+        return trips.filter(t => !hiddenLines.has(String(t.li_no)));
+    }, [trips, hiddenLines]);
+
+    const toggleLine = (lineNo) => {
+        setHiddenLines?.(prev => {
+            const next = new Set(prev);
+            if (next.has(lineNo)) {
+                next.delete(lineNo);
+            } else {
+                next.add(lineNo);
+            }
+            return next;
+        });
+    };
+
+    const toggleAll = () => {
+        if (hiddenLines?.size > 0) {
+            setHiddenLines?.(new Set()); // Show all
+        } else {
+            setHiddenLines?.(new Set(availableLines)); // Hide all
+        }
+    };
 
     // Compute brushData from filtered trips
     const brushData = useMemo(() => {
@@ -343,23 +358,35 @@ export default function BildfahrplanChart({ startStopId, endStopId, tagesart, sh
                     </div>
                 </div>
 
-                {/* Line Filter Input */}
+                {/* Line Filter Input (Pills) */}
                 {availableLines.length > 1 && (
-                    <div className="flex items-center gap-2 bg-[#111318] px-3 py-1.5 rounded-lg border border-border-dark/50">
-                        <span className="material-symbols-outlined text-slate-500 text-sm">route</span>
-                        <label className="text-xs text-slate-400">Linie:</label>
-                        <select
-                            value={selectedLine}
-                            onChange={(e) => setSelectedLine(e.target.value)}
-                            className="bg-transparent text-xs text-white border-0 outline-none cursor-pointer hover:text-primary transition-colors focus:ring-0"
-                            style={{ WebkitAppearance: 'none', appearance: 'none' }}
+                    <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-xs text-slate-400 mr-1">Linien:</span>
+                        <button
+                            onClick={toggleAll}
+                            className="px-2 py-1 text-xs rounded-full border border-border-dark bg-[#111318] hover:bg-surface text-text-muted transition-colors"
                         >
-                            <option value="" className="bg-[#111318]">Alle Linien ({availableLines.length})</option>
-                            {availableLines.map(line => (
-                                <option key={line} value={line} className="bg-[#111318]">Linie {line}</option>
-                            ))}
-                        </select>
-                        <span className="material-symbols-outlined text-slate-500 text-xs pointer-events-none">expand_more</span>
+                            Alle / Keine
+                        </button>
+                        {availableLines.map(lineNo => {
+                            const isVisible = !(hiddenLines?.has(lineNo));
+                            const color = getColorForLine(lineNo);
+                            return (
+                                <button
+                                    key={lineNo}
+                                    onClick={() => toggleLine(lineNo)}
+                                    className={`px-3 py-1 text-xs font-bold rounded-full transition-colors flex items-center gap-1.5`}
+                                    style={{
+                                        backgroundColor: isVisible ? `${color}30` : 'transparent',
+                                        color: isVisible ? color : '#9CA3AF',
+                                        border: `1px solid ${isVisible ? color : '#4B5563'}`
+                                    }}
+                                >
+                                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: isVisible ? color : '#4B5563' }}></span>
+                                    {lineNo}
+                                </button>
+                            );
+                        })}
                     </div>
                 )}
 

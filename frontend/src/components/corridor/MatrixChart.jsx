@@ -65,10 +65,9 @@ const CustomDot = (props) => {
     );
 };
 
-export default function MatrixChart({ stopId, tagesart, richtung, showDepotRuns = true }) {
+export default function MatrixChart({ stopId, tagesart, richtung, showDepotRuns = true, hiddenLines, setHiddenLines }) {
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(false);
-    const [hiddenLines, setHiddenLines] = useState(new Set());
 
     useEffect(() => {
         if (!stopId) return;
