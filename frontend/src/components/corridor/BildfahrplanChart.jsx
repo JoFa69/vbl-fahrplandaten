@@ -43,66 +43,7 @@ const parseTimeToSeconds = (timeStr) => {
     return h * 3600 + m * 60;
 };
 
-const CustomTooltip = ({ active, payload }) => {
-    if (active && payload && payload.length) {
-        // Line chart payload behavior: it might pass multiple series if they share X.
-        // We'll just grab the first one that triggered the hover.
-        const data = payload[0].payload;
-
-        return (
-            <div className="bg-[#111318] border border-border-dark p-3 rounded-xl shadow-xl min-w-[220px] pointer-events-none">
-                <p className="text-white font-bold mb-2">{data.stop_text}</p>
-                <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
-                    <span className="text-slate-400">Zeit:</span>
-                    <span className="font-bold text-white font-mono">{formatSeconds(data.x)} Uhr</span>
-
-                    <span className="text-slate-400">Linie:</span>
-                    <span className="font-bold text-white px-2 py-0.5 rounded inline-block" style={{ backgroundColor: getColorForLine(data.li_no) }}>
-                        {data.li_no}
-                    </span>
-
-                    <span className="text-slate-400">Fahrt-ID:</span>
-                    <span className="text-white font-mono">{data.schedule_id}</span>
-
-                    {data.richtung != null && (
-                        <>
-                            <span className="text-slate-400">Richtung:</span>
-                            <span className="text-white">{data.richtung === 1 ? 'Hin' : data.richtung === 2 ? 'Rück' : data.richtung}</span>
-                        </>
-                    )}
-
-                    {data.korridor_fahrzeit != null && (
-                        <>
-                            <span className="text-slate-400 mt-1 border-t border-border-dark pt-1">Korridor-Fahrzeit:</span>
-                            <span className="text-primary mt-1 border-t border-border-dark pt-1 font-bold">{formatFahrzeit(data.korridor_fahrzeit)}</span>
-                        </>
-                    )}
-
-                    {data.fahrt_start && (
-                        <>
-                            <span className="text-slate-400 mt-1">Von:</span>
-                            <span className="text-primary/80 mt-1 text-[10px] leading-tight flex items-center">{data.fahrt_start}</span>
-                        </>
-                    )}
-                    {data.fahrt_end && (
-                        <>
-                            <span className="text-slate-400">Nach:</span>
-                            <span className="text-primary/80 text-[10px] leading-tight flex items-center">{data.fahrt_end}</span>
-                        </>
-                    )}
-
-                    {data.is_depot_run && (
-                        <>
-                            <span className="text-slate-400 mt-1">Typ:</span>
-                            <span className="text-amber-400 italic mt-1">Ein-/Aussetzer</span>
-                        </>
-                    )}
-                </div>
-            </div>
-        );
-    }
-    return null;
-};
+// Custom Tooltip removed, now using local state overlay in the main component.
 
 export default function BildfahrplanChart({
     startStopId,
@@ -123,6 +64,7 @@ export default function BildfahrplanChart({
 
     // Controls state
     const [brushIndex, setBrushIndex] = useState({ startIndex: 0, endIndex: 0 });
+    const [tooltip, setTooltip] = useState(null);
 
     // Line Filter state (now managed globally via hiddenLines)
     const [availableLines, setAvailableLines] = useState([]);
@@ -234,50 +176,7 @@ export default function BildfahrplanChart({
         }
     };
 
-    // Pre-calculate line data to avoid re-calculating inside render loop
-    const memoizedLines = useMemo(() => {
-        return filteredTrips.map((trip) => {
-            const lineData = trip.points
-                .filter(p => {
-                    const key = p.stop_abbr || p.stop_id;
-                    return stopsDict[key] !== undefined;
-                })
-                .map(p => {
-                    const key = p.stop_abbr || p.stop_id;
-                    return {
-                        x: p.abfahrt,
-                        y: stopsDict[key].index,
-                        li_no: trip.li_no,
-                        is_depot_run: trip.is_depot_run,
-                        stop_text: p.stop_text,
-                        schedule_id: trip.schedule_id,
-                        richtung: trip.richtung,
-                        fahrt_start: trip.fahrt_start,
-                        fahrt_end: trip.fahrt_end,
-                        korridor_fahrzeit: trip.korridor_fahrzeit
-                    };
-                });
-
-            return (
-                <Line
-                    key={trip.schedule_id}
-                    type="linear"
-                    name={`Linie ${trip.li_no}${trip.is_depot_run ? ' (Depot)' : ''}`}
-                    data={lineData}
-                    dataKey="y"
-                    stroke={getColorForLine(trip.li_no)}
-                    strokeWidth={trip.is_depot_run ? 1.0 : 1.5}
-                    strokeDasharray={trip.is_depot_run ? "5 5" : "0"}
-                    // Performance fix: Do not draw static SVG circles for every point on every line
-                    dot={false}
-                    activeDot={{ r: 6, strokeWidth: 2, stroke: '#111318' }}
-                    opacity={trip.is_depot_run ? 0.6 : 0.9}
-                    isAnimationActive={false}
-                />
-            );
-        });
-    }, [filteredTrips, stopsDict]);
-
+    // Compute brushData from ALL trips so the timeline stays stable when filtering
     // Generate fixed 1-minute intervals for brush axis (Performance Optimization)
     const brushData = useMemo(() => {
         if (trips.length === 0) return [];
@@ -501,7 +400,6 @@ export default function BildfahrplanChart({
             <div className="flex-1">
                 <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart
-                        key={`chart-${hiddenLines ? Array.from(hiddenLines).sort().join('-') : 'all'}`}
                         margin={{ top: 10, right: 30, bottom: 20, left: 60 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                         <XAxis
@@ -529,13 +427,68 @@ export default function BildfahrplanChart({
                                 return stopKey ? stopsDict[stopKey].text.substring(0, 15) : '';
                             }}
                         />
-                        {/* Use shared=false so the tooltip applies specifically to the hovered line */}
-                        <Tooltip content={<CustomTooltip />} cursor={{ strokeDasharray: '3 3' }} shared={false} />
+                        {/* Custom SVG circles implement their own HTML Tooltips below to bypass Recharts caching bugs */}
 
-                        {/* Render purely memoized objects to prevent complete Recharts freeze */}
-                        {memoizedLines}
+                        {/* Generate Line components directly here to ensure Recharts binds events correctly */}
+                        {filteredTrips.map((trip) => {
+                            const lineData = trip.points
+                                .filter(p => {
+                                    const key = p.stop_abbr || p.stop_id;
+                                    return stopsDict[key] !== undefined;
+                                })
+                                .map(p => {
+                                    const key = p.stop_abbr || p.stop_id;
+                                    return {
+                                        x: p.abfahrt,
+                                        y: stopsDict[key].index,
+                                        li_no: trip.li_no,
+                                        is_depot_run: trip.is_depot_run,
+                                        stop_text: p.stop_text,
+                                        schedule_id: trip.schedule_id,
+                                        richtung: trip.richtung,
+                                        fahrt_start: trip.fahrt_start,
+                                        fahrt_end: trip.fahrt_end,
+                                        korridor_fahrzeit: trip.korridor_fahrzeit
+                                    };
+                                });
+
+                            return (
+                                <Line
+                                    key={`line-${trip.schedule_id}`}
+                                    type="linear"
+                                    name={`Linie ${trip.li_no}${trip.is_depot_run ? ' (Depot)' : ''}`}
+                                    data={lineData}
+                                    dataKey="y"
+                                    stroke={getColorForLine(trip.li_no)}
+                                    // Make tooltip easier to trigger by having a thicker invisible hover area
+                                    strokeWidth={trip.is_depot_run ? 2.0 : 2.5}
+                                    strokeDasharray={trip.is_depot_run ? "5 5" : "0"}
+                                    // Custom SVG Dots with manual mouse event bindings
+                                    dot={(props) => {
+                                        // Ignore empty points
+                                        if (props.cx == null || props.cy == null) return null;
+                                        return (
+                                            <circle
+                                                key={`${trip.schedule_id}-${props.index}`}
+                                                cx={props.cx}
+                                                cy={props.cy}
+                                                r={3}
+                                                fill={getColorForLine(trip.li_no)}
+                                                opacity={0.8}
+                                                style={{ cursor: 'pointer', pointerEvents: 'all' }}
+                                                onMouseEnter={(e) => setTooltip({ x: e.clientX, y: e.clientY, data: props.payload })}
+                                                onMouseLeave={() => setTooltip(null)}
+                                            />
+                                        );
+                                    }}
+                                    opacity={trip.is_depot_run ? 0.6 : 0.9}
+                                    isAnimationActive={false}
+                                />
+                            );
+                        })}
 
                         <Brush
+                            data={brushData}
                             dataKey="x"
                             height={30}
                             stroke="#9CA3AF"
@@ -548,6 +501,62 @@ export default function BildfahrplanChart({
                     </ComposedChart>
                 </ResponsiveContainer>
             </div>
+
+            {/* Custom Tooltip Overlay rendered via standard React */}
+            {tooltip && tooltip.data && (
+                <div
+                    className="fixed z-50 bg-[#111318] border border-border-dark p-3 rounded-xl shadow-xl min-w-[220px] pointer-events-none transition-opacity duration-150"
+                    style={{ top: tooltip.y + 15, left: tooltip.x + 15, opacity: 1 }}
+                >
+                    <p className="text-white font-bold mb-2">{tooltip.data.stop_text}</p>
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                        <span className="text-slate-400">Zeit:</span>
+                        <span className="font-bold text-white font-mono">{formatSeconds(tooltip.data.x)} Uhr</span>
+
+                        <span className="text-slate-400">Linie:</span>
+                        <span className="font-bold text-white px-2 py-0.5 rounded inline-block" style={{ backgroundColor: getColorForLine(tooltip.data.li_no) }}>
+                            {tooltip.data.li_no}
+                        </span>
+
+                        <span className="text-slate-400">Fahrt-ID:</span>
+                        <span className="text-white font-mono">{tooltip.data.schedule_id}</span>
+
+                        {tooltip.data.richtung != null && (
+                            <>
+                                <span className="text-slate-400">Richtung:</span>
+                                <span className="text-white">{tooltip.data.richtung === 1 ? 'Hin' : tooltip.data.richtung === 2 ? 'Rück' : tooltip.data.richtung}</span>
+                            </>
+                        )}
+
+                        {tooltip.data.korridor_fahrzeit != null && (
+                            <>
+                                <span className="text-slate-400 mt-1 border-t border-border-dark pt-1">Korridor-Fahrzeit:</span>
+                                <span className="text-primary mt-1 border-t border-border-dark pt-1 font-bold">{formatFahrzeit(tooltip.data.korridor_fahrzeit)}</span>
+                            </>
+                        )}
+
+                        {tooltip.data.fahrt_start && (
+                            <>
+                                <span className="text-slate-400 mt-1">Von:</span>
+                                <span className="text-primary/80 mt-1 text-[10px] leading-tight flex items-center">{tooltip.data.fahrt_start}</span>
+                            </>
+                        )}
+                        {tooltip.data.fahrt_end && (
+                            <>
+                                <span className="text-slate-400">Nach:</span>
+                                <span className="text-primary/80 text-[10px] leading-tight flex items-center">{tooltip.data.fahrt_end}</span>
+                            </>
+                        )}
+
+                        {tooltip.data.is_depot_run && (
+                            <>
+                                <span className="text-slate-400 mt-1">Typ:</span>
+                                <span className="text-amber-400 italic mt-1">Ein-/Aussetzer</span>
+                            </>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
