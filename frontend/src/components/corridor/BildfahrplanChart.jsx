@@ -205,10 +205,11 @@ export default function BildfahrplanChart({
     const toggleLine = (lineNo) => {
         setHiddenLines?.(prev => {
             const next = new Set(prev);
-            if (next.has(lineNo)) {
-                next.delete(lineNo);
+            const strVal = String(lineNo);
+            if (next.has(strVal)) {
+                next.delete(strVal);
             } else {
-                next.add(lineNo);
+                next.add(strVal);
             }
             return next;
         });
@@ -499,7 +500,9 @@ export default function BildfahrplanChart({
 
             <div className="flex-1">
                 <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={brushData} margin={{ top: 10, right: 30, bottom: 20, left: 60 }}>
+                    <ComposedChart
+                        key={`chart-${hiddenLines ? Array.from(hiddenLines).sort().join('-') : 'all'}`}
+                        margin={{ top: 10, right: 30, bottom: 20, left: 60 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                         <XAxis
                             type="number"

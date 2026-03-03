@@ -139,12 +139,13 @@ export default function MatrixChart({ stopId, tagesart, richtung, showDepotRuns 
     ];
 
     const toggleLine = (lineNo) => {
-        setHiddenLines(prev => {
+        setHiddenLines?.(prev => {
             const next = new Set(prev);
-            if (next.has(lineNo)) {
-                next.delete(lineNo);
+            const strVal = String(lineNo);
+            if (next.has(strVal)) {
+                next.delete(strVal);
             } else {
-                next.add(lineNo);
+                next.add(strVal);
             }
             return next;
         });

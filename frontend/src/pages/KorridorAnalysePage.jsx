@@ -206,7 +206,7 @@ export default function KorridorAnalysePage() {
                                 />
                             </div>
                         </div>
-                        <div className="h-[400px] w-full">
+                        <div className="h-[75vh] min-h-[600px] w-full">
                             <BildfahrplanChart
                                 startStopId={startStopId}
                                 endStopId={endStopId}
