@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { fetchCorridorBildfahrplan } from '../../api';
 import {
-    ComposedChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Brush
+    ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Brush
 } from 'recharts';
 
 const getColorForLine = (lineNo) => {
@@ -24,6 +24,15 @@ const formatSeconds = (sec) => {
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 };
 
+const formatFahrzeit = (sec) => {
+    if (sec == null || isNaN(sec)) return '-';
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    if (m === 0) return `${s}s`;
+    if (s === 0) return `${m} Min`;
+    return `${m} Min ${s}s`;
+};
+
 const parseTimeToSeconds = (timeStr) => {
     if (!timeStr) return null;
     const parts = timeStr.split(':');
@@ -36,9 +45,12 @@ const parseTimeToSeconds = (timeStr) => {
 
 const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
+        // Line chart payload behavior: it might pass multiple series if they share X.
+        // We'll just grab the first one that triggered the hover.
         const data = payload[0].payload;
+
         return (
-            <div className="bg-[#111318] border border-border-dark p-3 rounded-xl shadow-xl min-w-[220px]">
+            <div className="bg-[#111318] border border-border-dark p-3 rounded-xl shadow-xl min-w-[220px] pointer-events-none">
                 <p className="text-white font-bold mb-2">{data.stop_text}</p>
                 <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
                     <span className="text-slate-400">Zeit:</span>
@@ -59,16 +71,23 @@ const CustomTooltip = ({ active, payload }) => {
                         </>
                     )}
 
+                    {data.korridor_fahrzeit != null && (
+                        <>
+                            <span className="text-slate-400 mt-1 border-t border-border-dark pt-1">Korridor-Fahrzeit:</span>
+                            <span className="text-primary mt-1 border-t border-border-dark pt-1 font-bold">{formatFahrzeit(data.korridor_fahrzeit)}</span>
+                        </>
+                    )}
+
                     {data.fahrt_start && (
                         <>
-                            <span className="text-slate-400 mt-1 border-t border-border-dark pt-1">Von:</span>
-                            <span className="text-primary/80 mt-1 border-t border-border-dark pt-1 text-[10px]">{data.fahrt_start}</span>
+                            <span className="text-slate-400 mt-1">Von:</span>
+                            <span className="text-primary/80 mt-1 text-[10px] leading-tight flex items-center">{data.fahrt_start}</span>
                         </>
                     )}
                     {data.fahrt_end && (
                         <>
                             <span className="text-slate-400">Nach:</span>
-                            <span className="text-primary/80 text-[10px]">{data.fahrt_end}</span>
+                            <span className="text-primary/80 text-[10px] leading-tight flex items-center">{data.fahrt_end}</span>
                         </>
                     )}
 
@@ -90,9 +109,15 @@ export default function BildfahrplanChart({ startStopId, endStopId, tagesart, sh
     const [trips, setTrips] = useState([]);
     const [stopsDict, setStopsDict] = useState({});
     const [loading, setLoading] = useState(false);
+
+    // Controls state
     const [brushIndex, setBrushIndex] = useState({ startIndex: 0, endIndex: 0 });
     const [timeFrom, setTimeFrom] = useState('');
     const [timeTo, setTimeTo] = useState('');
+
+    // Line Filter state
+    const [availableLines, setAvailableLines] = useState([]);
+    const [selectedLine, setSelectedLine] = useState('');
 
     useEffect(() => {
         if (!startStopId || !endStopId) return;
@@ -106,6 +131,35 @@ export default function BildfahrplanChart({ startStopId, endStopId, tagesart, sh
                 if (!showDepotRuns) {
                     fetchedTrips = fetchedTrips.filter(t => !t.is_depot_run);
                 }
+
+                // Extract unique lines for filter
+                const uniqueLines = Array.from(new Set(fetchedTrips.map(t => String(t.li_no)))).sort();
+                setAvailableLines(uniqueLines);
+                // Reset selected line if it's no longer available for this corridor
+                if (selectedLine && !uniqueLines.includes(selectedLine)) {
+                    setSelectedLine('');
+                }
+
+                // Calculate total korridor_fahrzeit for each trip
+                fetchedTrips.forEach(t => {
+                    const sortedPoints = [...t.points].sort((a, b) => a.li_lfd_nr - b.li_lfd_nr);
+                    if (sortedPoints.length > 0) {
+                        const firstPt = sortedPoints[0];
+                        const lastPt = sortedPoints[sortedPoints.length - 1];
+
+                        // Fallbacks: ankunft is typically the end time, abfahrt the start time.
+                        const startTime = firstPt.abfahrt ?? firstPt.ankunft;
+                        const endTime = lastPt.ankunft ?? lastPt.abfahrt;
+
+                        if (startTime != null && endTime != null && endTime >= startTime) {
+                            t.korridor_fahrzeit = endTime - startTime;
+                        } else {
+                            t.korridor_fahrzeit = null;
+                        }
+                    } else {
+                        t.korridor_fahrzeit = null;
+                    }
+                });
 
                 // Build Y-axis: group by stop_abbr instead of stop_id to avoid duplicates
                 let longestTrip = fetchedTrips[0];
@@ -138,17 +192,23 @@ export default function BildfahrplanChart({ startStopId, endStopId, tagesart, sh
         load();
     }, [startStopId, endStopId, tagesart, showDepotRuns]);
 
-    // Compute brushData from trips
+    // Apply Line Filter
+    const filteredTrips = useMemo(() => {
+        if (!selectedLine || selectedLine === '') return trips;
+        return trips.filter(t => String(t.li_no) === selectedLine);
+    }, [trips, selectedLine]);
+
+    // Compute brushData from filtered trips
     const brushData = useMemo(() => {
-        if (trips.length === 0) return [];
+        if (filteredTrips.length === 0) return [];
         const allIntervals = new Set();
-        trips.forEach(trip => {
+        filteredTrips.forEach(trip => {
             trip.points.forEach(p => {
                 if (p.abfahrt != null) allIntervals.add(p.abfahrt);
             });
         });
         return Array.from(allIntervals).sort((a, b) => a - b).map(val => ({ x: val }));
-    }, [trips]);
+    }, [filteredTrips]);
 
     // Reset brush when data changes
     useEffect(() => {
@@ -157,7 +217,7 @@ export default function BildfahrplanChart({ startStopId, endStopId, tagesart, sh
             setTimeFrom(formatSeconds(brushData[0].x));
             setTimeTo(formatSeconds(brushData[brushData.length - 1].x));
         }
-    }, [brushData]);
+    }, [brushData]); // trigger on brushData instead of trips to handle filtering automatically
 
     // Compute zoom domain
     const zoomDomain = useMemo(() => {
@@ -257,27 +317,53 @@ export default function BildfahrplanChart({ startStopId, endStopId, tagesart, sh
 
     return (
         <div className="flex flex-col h-full">
-            {/* Time filter inputs */}
-            <div className="flex items-center gap-4 mb-3">
-                <div className="flex items-center gap-2">
-                    <label className="text-xs text-slate-400">Von:</label>
-                    <input
-                        type="time"
-                        value={timeFrom}
-                        onChange={(e) => handleTimeFromChange(e.target.value)}
-                        className="bg-surface border border-border-dark rounded px-2 py-1 text-xs text-white w-24 outline-none focus:border-primary font-mono"
-                    />
+            {/* Control Header */}
+            <div className="flex items-center gap-6 mb-3">
+                {/* Time filter inputs */}
+                <div className="flex items-center gap-4 bg-[#111318] px-3 py-1.5 rounded-lg border border-border-dark/50">
+                    <div className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-slate-500 text-sm">schedule</span>
+                        <label className="text-xs text-slate-400">Von:</label>
+                        <input
+                            type="time"
+                            value={timeFrom}
+                            onChange={(e) => handleTimeFromChange(e.target.value)}
+                            className="bg-transparent text-xs text-white w-20 outline-none font-mono"
+                        />
+                    </div>
+                    <div className="w-px h-4 bg-border-dark"></div>
+                    <div className="flex items-center gap-2">
+                        <label className="text-xs text-slate-400">Bis:</label>
+                        <input
+                            type="time"
+                            value={timeTo}
+                            onChange={(e) => handleTimeToChange(e.target.value)}
+                            className="bg-transparent text-xs text-white w-20 outline-none font-mono"
+                        />
+                    </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    <label className="text-xs text-slate-400">Bis:</label>
-                    <input
-                        type="time"
-                        value={timeTo}
-                        onChange={(e) => handleTimeToChange(e.target.value)}
-                        className="bg-surface border border-border-dark rounded px-2 py-1 text-xs text-white w-24 outline-none focus:border-primary font-mono"
-                    />
-                </div>
-                <span className="text-[10px] text-slate-500 ml-auto">Zeitfenster auch per Schieber unten einstellbar</span>
+
+                {/* Line Filter Input */}
+                {availableLines.length > 1 && (
+                    <div className="flex items-center gap-2 bg-[#111318] px-3 py-1.5 rounded-lg border border-border-dark/50">
+                        <span className="material-symbols-outlined text-slate-500 text-sm">route</span>
+                        <label className="text-xs text-slate-400">Linie:</label>
+                        <select
+                            value={selectedLine}
+                            onChange={(e) => setSelectedLine(e.target.value)}
+                            className="bg-transparent text-xs text-white border-0 outline-none cursor-pointer hover:text-primary transition-colors focus:ring-0"
+                            style={{ WebkitAppearance: 'none', appearance: 'none' }}
+                        >
+                            <option value="" className="bg-[#111318]">Alle Linien ({availableLines.length})</option>
+                            {availableLines.map(line => (
+                                <option key={line} value={line} className="bg-[#111318]">Linie {line}</option>
+                            ))}
+                        </select>
+                        <span className="material-symbols-outlined text-slate-500 text-xs pointer-events-none">expand_more</span>
+                    </div>
+                )}
+
+                <span className="text-[10px] text-slate-500 ml-auto hidden md:block">Hovern für Details • Bildbereich kann per Schieber unten markiert werden</span>
             </div>
 
             <div className="flex-1">
@@ -309,9 +395,10 @@ export default function BildfahrplanChart({ startStopId, endStopId, tagesart, sh
                                 return stopKey ? stopsDict[stopKey].text.substring(0, 15) : '';
                             }}
                         />
-                        <Tooltip content={<CustomTooltip />} cursor={{ strokeDasharray: '3 3' }} />
+                        {/* Use shared=false so the tooltip applies specifically to the hovered line */}
+                        <Tooltip content={<CustomTooltip />} cursor={{ strokeDasharray: '3 3' }} shared={false} />
 
-                        {trips.map((trip) => {
+                        {filteredTrips.map((trip) => {
                             const lineData = trip.points
                                 .filter(p => {
                                     const key = p.stop_abbr || p.stop_id;
@@ -329,23 +416,26 @@ export default function BildfahrplanChart({ startStopId, endStopId, tagesart, sh
                                         richtung: trip.richtung,
                                         fahrt_start: trip.fahrt_start,
                                         fahrt_end: trip.fahrt_end,
+                                        korridor_fahrzeit: trip.korridor_fahrzeit
                                     };
                                 });
 
+                            // Using Line instead of Scatter for easier hovering mechanics
+                            // The line interpolation makes the entire trip path a hover target.
                             return (
-                                <Scatter
+                                <Line
                                     key={trip.schedule_id}
+                                    type="linear"
                                     name={`Linie ${trip.li_no}${trip.is_depot_run ? ' (Depot)' : ''}`}
                                     data={lineData}
-                                    line={{
-                                        stroke: getColorForLine(trip.li_no),
-                                        strokeWidth: trip.is_depot_run ? 1.0 : 1.5,
-                                        strokeDasharray: trip.is_depot_run ? "5 5" : "0"
-                                    }}
-                                    shape="circle"
-                                    fill={getColorForLine(trip.li_no)}
-                                    opacity={trip.is_depot_run ? 0.6 : 1.0}
-                                    r={trip.is_depot_run ? 1.0 : 1.5}
+                                    dataKey="y"
+                                    stroke={getColorForLine(trip.li_no)}
+                                    strokeWidth={trip.is_depot_run ? 1.0 : 1.5}
+                                    strokeDasharray={trip.is_depot_run ? "5 5" : "0"}
+                                    dot={{ r: 2.5, fill: getColorForLine(trip.li_no), strokeWidth: 0, opacity: trip.is_depot_run ? 0.6 : 1.0 }}
+                                    activeDot={{ r: 6, strokeWidth: 2, stroke: '#111318' }}
+                                    opacity={trip.is_depot_run ? 0.6 : 0.9}
+                                    isAnimationActive={false}
                                 />
                             );
                         })}
