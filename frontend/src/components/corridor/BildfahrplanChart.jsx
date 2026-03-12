@@ -65,6 +65,7 @@ export default function BildfahrplanChart({
     // Controls state
     const [brushIndex, setBrushIndex] = useState({ startIndex: 0, endIndex: 0 });
     const [tooltip, setTooltip] = useState(null);
+    const chartRef = React.useRef(null);
 
     // Line Filter state (now managed globally via hiddenLines)
     const [availableLines, setAvailableLines] = useState([]);
@@ -143,6 +144,7 @@ export default function BildfahrplanChart({
         if (!hiddenLines) return trips;
         return trips.filter(t => !hiddenLines.has(String(t.li_no)));
     }, [trips, hiddenLines]);
+
 
     const toggleLine = (lineNo) => {
         setHiddenLines?.(prev => {
@@ -274,6 +276,96 @@ export default function BildfahrplanChart({
     }, [stopsDict]);
     const maxY = stopIndices.length > 0 ? Math.max(...stopIndices) : 0;
 
+    // Flatten all points of all visible trips for math-based Euclidean hover detection
+    // This replaces the 6,000 individual SVG circle DOM nodes with a single O(n) scan
+    const allVisiblePoints = useMemo(() => {
+        const points = [];
+        filteredTrips.forEach(trip => {
+            trip.points.forEach(p => {
+                const key = p.stop_abbr || p.stop_id;
+                if (stopsDict[key]) {
+                    points.push({
+                        timeSec: p.abfahrt,
+                        stopIdx: stopsDict[key].index,
+                        payload: {
+                            x: p.abfahrt,
+                            y: stopsDict[key].index,
+                            li_no: trip.li_no,
+                            is_depot_run: trip.is_depot_run,
+                            stop_text: p.stop_text,
+                            schedule_id: trip.schedule_id,
+                            richtung: trip.richtung,
+                            fahrt_start: trip.fahrt_start,
+                            fahrt_end: trip.fahrt_end,
+                            korridor_fahrzeit: trip.korridor_fahrzeit
+                        }
+                    });
+                }
+            });
+        });
+        return points;
+    }, [filteredTrips, stopsDict]);
+
+    // Single mouse listener to find nearest data point via Euclidean distance
+    const handleMouseMove = useCallback((e) => {
+        if (!chartRef.current || allVisiblePoints.length === 0) return;
+
+        const rect = chartRef.current.getBoundingClientRect();
+        const cursorX = e.clientX;
+        const cursorY = e.clientY;
+
+        // Recharts margin: { top: 10, right: 30, bottom: 20, left: 60 }
+        const chartLeft = rect.left + 60;
+        const chartRight = rect.right - 30;
+        const chartTop = rect.top + 10;
+        const chartBottom = rect.bottom - 80;
+
+        const chartWidth = chartRight - chartLeft;
+        const chartHeight = chartBottom - chartTop;
+
+        if (cursorX < chartLeft || cursorX > chartRight || cursorY < chartTop || cursorY > chartBottom || chartWidth <= 0 || chartHeight <= 0) {
+            setTooltip(null);
+            return;
+        }
+
+        // Convert pixel position to data domain values
+        const xDomain = zoomDomain;
+        const xMin = typeof xDomain[0] === 'number' ? xDomain[0] : 0;
+        const xMax = typeof xDomain[1] === 'number' ? xDomain[1] : 86400;
+        const domainXRange = xMax - xMin;
+        const domainYRange = maxY || 1;
+
+        let nearestPt = null;
+        let minDistSq = Infinity;
+        const maxDistSq = 15 * 15; // 15px hover radius
+
+        for (let i = 0; i < allVisiblePoints.length; i++) {
+            const pt = allVisiblePoints[i];
+            if (pt.timeSec < xMin || pt.timeSec > xMax) continue;
+
+            const ptPctX = (pt.timeSec - xMin) / domainXRange;
+            const ptPxX = chartLeft + (ptPctX * chartWidth);
+
+            const ptPctY = pt.stopIdx / domainYRange;
+            const ptPxY = chartTop + (ptPctY * chartHeight);
+
+            const dx = ptPxX - cursorX;
+            const dy = ptPxY - cursorY;
+            const distSq = dx * dx + dy * dy;
+
+            if (distSq < minDistSq && distSq <= maxDistSq) {
+                minDistSq = distSq;
+                nearestPt = pt;
+            }
+        }
+
+        if (nearestPt) {
+            setTooltip({ x: cursorX, y: cursorY, data: nearestPt.payload });
+        } else {
+            setTooltip(null);
+        }
+    }, [allVisiblePoints, zoomDomain, maxY]);
+
     const handleBrushChange = useCallback((e) => {
         if (e && e.startIndex !== undefined && e.endIndex !== undefined) {
             setBrushIndex(prev => {
@@ -297,6 +389,7 @@ export default function BildfahrplanChart({
 
     const handleTimeToChange = useCallback((value) => {
         setGlobalTimeTo?.(value);
+        const sec = parseTimeToSeconds(value);
         if (sec != null && brushData.length > 0) {
             let bestIdx = brushData.length - 1;
             let bestDiff = Infinity;
@@ -335,7 +428,9 @@ export default function BildfahrplanChart({
     }
 
     return (
-        <div className="flex flex-col h-full">
+        <div
+            className="flex flex-col h-full relative"
+        >
             {/* Control Header */}
             <div className="flex items-center gap-6 mb-3">
                 {/* Time filter inputs */}
@@ -397,7 +492,12 @@ export default function BildfahrplanChart({
                 <span className="text-[10px] text-slate-500 ml-auto hidden md:block">Hovern für Details • Bildbereich kann per Schieber unten markiert werden</span>
             </div>
 
-            <div className="flex-1">
+            <div
+                className="flex-1 relative"
+                ref={chartRef}
+                onMouseMove={handleMouseMove}
+                onMouseLeave={() => setTooltip(null)}
+            >
                 <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart
                         margin={{ top: 10, right: 30, bottom: 20, left: 60 }}>
@@ -463,24 +563,8 @@ export default function BildfahrplanChart({
                                     // Make tooltip easier to trigger by having a thicker invisible hover area
                                     strokeWidth={trip.is_depot_run ? 2.0 : 2.5}
                                     strokeDasharray={trip.is_depot_run ? "5 5" : "0"}
-                                    // Custom SVG Dots with manual mouse event bindings
-                                    dot={(props) => {
-                                        // Ignore empty points
-                                        if (props.cx == null || props.cy == null) return null;
-                                        return (
-                                            <circle
-                                                key={`${trip.schedule_id}-${props.index}`}
-                                                cx={props.cx}
-                                                cy={props.cy}
-                                                r={3}
-                                                fill={getColorForLine(trip.li_no)}
-                                                opacity={0.8}
-                                                style={{ cursor: 'pointer', pointerEvents: 'all' }}
-                                                onMouseEnter={(e) => setTooltip({ x: e.clientX, y: e.clientY, data: props.payload })}
-                                                onMouseLeave={() => setTooltip(null)}
-                                            />
-                                        );
-                                    }}
+                                    dot={false}
+                                    activeDot={false}
                                     opacity={trip.is_depot_run ? 0.6 : 0.9}
                                     isAnimationActive={false}
                                 />

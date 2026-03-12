@@ -642,16 +642,30 @@ async def get_all_primary_routes(
 def get_timetable_tagesarten(x_scenario: str = Header("strategic")):
     con = get_db(x_scenario)
     try:
-        query = """
-            SELECT DISTINCT d.tagesart_abbr, MAX(d.tagesart_text) as tagesart_text
-            FROM dim_date d
-            JOIN cub_schedule s ON d.day_id = s.day_id
-            WHERE d.tagesart_abbr IS NOT NULL
-            GROUP BY d.tagesart_abbr
-            ORDER BY MIN(d.tagesart_nr)
-        """
-        result = con.execute(query).fetchall()
-        return [{"abbr": row[0], "text": row[1]} for row in result]
+        # Try with tagesart_text first (strategic DB), fall back to abbr-only (operative DB)
+        try:
+            query = """
+                SELECT DISTINCT d.tagesart_abbr, MAX(d.tagesart_text) as tagesart_text
+                FROM dim_date d
+                JOIN cub_schedule s ON d.day_id = s.day_id
+                WHERE d.tagesart_abbr IS NOT NULL
+                GROUP BY d.tagesart_abbr
+                ORDER BY MIN(d.tagesart_nr)
+            """
+            result = con.execute(query).fetchall()
+            return [{"abbr": row[0], "text": row[1]} for row in result]
+        except Exception:
+            # Operative DB may not have tagesart_text column
+            query_fallback = """
+                SELECT DISTINCT d.tagesart_abbr, d.tagesart_abbr as tagesart_text
+                FROM dim_date d
+                JOIN cub_schedule s ON d.day_id = s.day_id
+                WHERE d.tagesart_abbr IS NOT NULL
+                GROUP BY d.tagesart_abbr
+                ORDER BY MIN(d.tagesart_nr)
+            """
+            result = con.execute(query_fallback).fetchall()
+            return [{"abbr": row[0], "text": row[1]} for row in result]
     except Exception as e:
         print(f"Tagesarten Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))

@@ -58,52 +58,91 @@ def get_stops(tagesart: str = None, ort: str = None, x_scenario: str = Header("s
             
         ort_filter = ""
         if ort:
-            # We will use this in the unique_stops CTE
             ort_filter = f" AND stop_ort = '{ort}'"
 
-        # Get all stops with coordinates, plus real frequency and line count
-        # Frequency is calculated as average daily trips (total trips / distinct days)
-        query = f"""
-            WITH stop_trips AS (
+        # Try strategic schema first (cub_schedule has route_id)
+        try:
+            query = f"""
+                WITH stop_trips AS (
+                    SELECT 
+                        r.ideal_stop_nr as stop_abbr,
+                        COUNT(DISTINCT s.frt_id) / CAST(NULLIF(COUNT(DISTINCT s.day_id), 0) AS FLOAT) as avg_daily_trips,
+                        COUNT(DISTINCT l.li_no) as num_lines
+                    FROM cub_schedule s
+                    JOIN dim_route r ON s.route_id = r.route_id
+                    JOIN dim_line l ON s.li_id = l.li_id
+                    JOIN dim_date d ON s.day_id = d.day_id
+                    {where_clause}
+                    GROUP BY r.ideal_stop_nr
+                ),
+                unique_stops AS (
+                    SELECT 
+                        stop_abbr, 
+                        MAX(stop_point_text) as full_stop_name, 
+                        MAX(stop_ort) as stop_ort,
+                        MAX(stop_name) as clean_stop_name,
+                        MAX(lat) as lat, 
+                        MAX(lon) as lon 
+                    FROM dim_ort 
+                    WHERE lat IS NOT NULL AND lon IS NOT NULL {ort_filter}
+                    GROUP BY stop_abbr
+                )
                 SELECT 
-                    r.ideal_stop_nr as stop_abbr,
-                    COUNT(DISTINCT s.frt_id) / CAST(NULLIF(COUNT(DISTINCT s.day_id), 0) AS FLOAT) as avg_daily_trips,
-                    COUNT(DISTINCT l.li_no) as num_lines
-                FROM cub_schedule s
-                JOIN dim_route r ON s.route_id = r.route_id
-                JOIN dim_line l ON s.li_id = l.li_id
-                JOIN dim_date d ON s.day_id = d.day_id
-                {where_clause}
-                GROUP BY r.ideal_stop_nr
-            ),
-            unique_stops AS (
+                    u.stop_abbr as stop_id,
+                    COALESCE(u.full_stop_name, u.stop_abbr) as stop_name,
+                    u.stop_ort,
+                    u.clean_stop_name,
+                    COALESCE(CAST(ROUND(st.avg_daily_trips) AS INTEGER), 0) as frequency,
+                    COALESCE(st.num_lines, 0) as lines,
+                    u.lat,
+                    u.lon
+                FROM unique_stops u
+                LEFT JOIN stop_trips st ON u.stop_abbr = st.stop_abbr
+                ORDER BY st.avg_daily_trips DESC NULLS LAST
+            """
+            result = con.execute(query).fetchall()
+        except Exception:
+            # Fallback for operative DB: cub_schedule has no route_id, use cub_route instead
+            query = f"""
+                WITH stop_trips AS (
+                    SELECT 
+                        o.stop_abbr as stop_abbr,
+                        COUNT(DISTINCT s.frt_id) / CAST(NULLIF(COUNT(DISTINCT s.day_id), 0) AS FLOAT) as avg_daily_trips,
+                        COUNT(DISTINCT l.li_no) as num_lines
+                    FROM cub_schedule s
+                    JOIN cub_route cr ON s.schedule_id = cr.schedule_id
+                    JOIN dim_ort o ON cr.stop_id = o.stop_no
+                    JOIN dim_line l ON s.li_id = l.li_id
+                    JOIN dim_date d ON s.day_id = d.day_id
+                    {where_clause}
+                    GROUP BY o.stop_abbr
+                ),
+                unique_stops AS (
+                    SELECT 
+                        stop_abbr, 
+                        MAX(stop_point_text) as full_stop_name, 
+                        MAX(stop_ort) as stop_ort,
+                        MAX(stop_name) as clean_stop_name,
+                        MAX(lat) as lat, 
+                        MAX(lon) as lon 
+                    FROM dim_ort 
+                    WHERE lat IS NOT NULL AND lon IS NOT NULL {ort_filter}
+                    GROUP BY stop_abbr
+                )
                 SELECT 
-                    stop_abbr, 
-                    MAX(stop_point_text) as full_stop_name, 
-                    MAX(stop_ort) as stop_ort,
-                    MAX(stop_name) as clean_stop_name,
-                    MAX(lat) as lat, 
-                    MAX(lon) as lon 
-                FROM dim_ort 
-                WHERE lat IS NOT NULL AND lon IS NOT NULL {ort_filter}
-                GROUP BY stop_abbr
-            )
-            SELECT 
-                u.stop_abbr as stop_id,
-                COALESCE(u.full_stop_name, u.stop_abbr) as stop_name,
-                u.stop_ort,
-                u.clean_stop_name,
-                COALESCE(CAST(ROUND(st.avg_daily_trips) AS INTEGER), 0) as frequency,
-                COALESCE(st.num_lines, 0) as lines,
-                u.lat,
-                u.lon
-            FROM unique_stops u
-            LEFT JOIN stop_trips st ON u.stop_abbr = st.stop_abbr
-            ORDER BY st.avg_daily_trips DESC NULLS LAST
-        """
-        result = con.execute(query).fetchall()
-        # Note: If an 'ort' filter is applied and a stop doesn't match, it gets excluded via INNER JOIN or left out of unique_stops
-        # But st.avg_daily_trips is computed for all. By using LEFT JOIN from unique_stops, we only return the matched ones!
+                    u.stop_abbr as stop_id,
+                    COALESCE(u.full_stop_name, u.stop_abbr) as stop_name,
+                    u.stop_ort,
+                    u.clean_stop_name,
+                    COALESCE(CAST(ROUND(st.avg_daily_trips) AS INTEGER), 0) as frequency,
+                    COALESCE(st.num_lines, 0) as lines,
+                    u.lat,
+                    u.lon
+                FROM unique_stops u
+                LEFT JOIN stop_trips st ON u.stop_abbr = st.stop_abbr
+                ORDER BY st.avg_daily_trips DESC NULLS LAST
+            """
+            result = con.execute(query).fetchall()
         return [
             {
                 "stop_id": row[0], 
