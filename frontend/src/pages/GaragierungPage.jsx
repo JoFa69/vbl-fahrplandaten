@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Title, Text, Metric, Grid, Col, Table, TableHead, TableRow, TableHeaderCell, TableBody, TableCell, Badge, Accordion, AccordionHeader, AccordionBody, AccordionList } from '@tremor/react';
 import { fetchGaragingData } from '../api';
+import { createColumnHelper } from '@tanstack/react-table';
+import DataTable from '../components/DataTable';
+
+const columnHelper = createColumnHelper();
 
 export default function GaragierungPage() {
     const [details, setDetails] = useState([]);
@@ -29,6 +33,81 @@ export default function GaragierungPage() {
         }
         loadData();
     }, [tagesart]);
+
+    // Column Definitions for DataTable (Moved up to avoid hook order violation)
+    const ausfahrtenColumns = React.useMemo(() => [
+        columnHelper.accessor('ausfahrt_zeit', {
+            header: 'Zeit',
+            cell: info => <span className="text-white font-mono">{formatTime(info.getValue())}</span>,
+            enableColumnFilter: false,
+        }),
+        columnHelper.accessor('umlauf_kuerzel', {
+            header: 'Umlauf',
+            cell: info => <span className="text-white font-medium">{info.getValue()}</span>,
+            enableColumnFilter: true,
+        }),
+        columnHelper.accessor('line_no', {
+            header: 'Linie',
+            cell: info => <Badge color="blue" size="xs">Linie {info.getValue()}</Badge>,
+            enableColumnFilter: true,
+        }),
+        columnHelper.accessor('depot_ausfahrt', {
+            header: 'Depot',
+            cell: info => <Text className="text-text-muted">{info.getValue() || '-'}</Text>,
+            enableColumnFilter: true,
+        }),
+        columnHelper.accessor('is_asymmetric', {
+            header: 'Asymmetrie',
+            cell: info => info.getValue() ? (
+                <Badge color="amber" size="xs" tooltip={`Endet an anderem Depot: ${info.row.original.depot_einfahrt}`}>
+                    Asymmetrisch
+                </Badge>
+            ) : null,
+            enableColumnFilter: false,
+        }),
+        columnHelper.accessor('vehicle_type', {
+            header: 'Fahrzeugtyp',
+            cell: info => <Badge color="gray" size="xs">{info.getValue()}</Badge>,
+            enableColumnFilter: true,
+        }),
+    ], []);
+
+    const einfahrtenColumns = React.useMemo(() => [
+        columnHelper.accessor('einfahrt_zeit', {
+            header: 'Zeit',
+            cell: info => <span className="text-white font-mono">{formatTime(info.getValue())}</span>,
+            enableColumnFilter: false,
+        }),
+        columnHelper.accessor('umlauf_kuerzel', {
+            header: 'Umlauf',
+            cell: info => <span className="text-white font-medium">{info.getValue()}</span>,
+            enableColumnFilter: true,
+        }),
+        columnHelper.accessor('line_no', {
+            header: 'Linie',
+            cell: info => <Badge color="blue" size="xs">Linie {info.getValue()}</Badge>,
+            enableColumnFilter: true,
+        }),
+        columnHelper.accessor('depot_einfahrt', {
+            header: 'Depot',
+            cell: info => <Text className="text-text-muted">{info.getValue() || '-'}</Text>,
+            enableColumnFilter: true,
+        }),
+        columnHelper.accessor('is_asymmetric', {
+            header: 'Asymmetrie',
+            cell: info => info.getValue() ? (
+                <Badge color="amber" size="xs" tooltip={`Startete an anderem Depot: ${info.row.original.depot_ausfahrt}`}>
+                    Asymmetrisch
+                </Badge>
+            ) : null,
+            enableColumnFilter: false,
+        }),
+        columnHelper.accessor('vehicle_type', {
+            header: 'Fahrzeugtyp',
+            cell: info => <Badge color="gray" size="xs">{info.getValue()}</Badge>,
+            enableColumnFilter: true,
+        }),
+    ], []);
 
     // Helper functions for time formatting
     const formatTime = (seconds) => {
@@ -111,6 +190,7 @@ export default function GaragierungPage() {
     const ausfahrtenList = details.filter(r => r.ausfahrt_zeit !== null && r.ausfahrt_zeit !== undefined);
     const einfahrtenList = details.filter(r => r.einfahrt_zeit !== null && r.einfahrt_zeit !== undefined);
 
+
     return (
         <div className="p-8 pb-32 max-w-[1600px] mx-auto space-y-8 animate-in mt-12">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
@@ -142,7 +222,7 @@ export default function GaragierungPage() {
                             .map(([depot, count]) => (
                                 <div key={depot} className="flex flex-col bg-bg-dark p-4 rounded-lg border border-border-dark/50 min-w-[140px] flex-1">
                                     <Text className="text-text-muted text-xs uppercase tracking-wider mb-1">{depot}</Text>
-                                    <Metric className="text-emerald-400 text-3xl font-bold">{count}</Metric>
+                                    <Metric className="text-emerald-400 text-3xl font-bold">{Math.round(count)}</Metric>
                                 </div>
                             ))}
                     </div>
@@ -155,7 +235,7 @@ export default function GaragierungPage() {
                             .map(([depot, count]) => (
                                 <div key={depot} className="flex flex-col bg-bg-dark p-4 rounded-lg border border-border-dark/50 min-w-[140px] flex-1">
                                     <Text className="text-text-muted text-xs uppercase tracking-wider mb-1">{depot}</Text>
-                                    <Metric className="text-rose-400 text-3xl font-bold">{count}</Metric>
+                                    <Metric className="text-rose-400 text-3xl font-bold">{Math.round(count)}</Metric>
                                 </div>
                             ))}
                     </div>
@@ -180,11 +260,11 @@ export default function GaragierungPage() {
                                             <div className="flex gap-8 font-mono">
                                                 <div className="flex flex-col items-end">
                                                     <span className="text-[10px] text-emerald-500/70 uppercase font-black">Aus</span>
-                                                    <span className="text-emerald-400 text-2xl font-black">{vt.ausfahrten}</span>
+                                                    <span className="text-emerald-400 text-2xl font-black">{vt.ausfahrten.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
                                                 </div>
                                                 <div className="flex flex-col items-end">
                                                     <span className="text-[10px] text-rose-500/70 uppercase font-black">Ein</span>
-                                                    <span className="text-rose-400 text-2xl font-black">{vt.einfahrten}</span>
+                                                    <span className="text-rose-400 text-2xl font-black">{vt.einfahrten.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -192,8 +272,8 @@ export default function GaragierungPage() {
                                     <div className="flex justify-between items-center pt-3 border-t border-border-dark/60 mt-2">
                                         <Text className="text-white font-bold text-base">Gesamt:</Text>
                                         <div className="flex gap-6 font-mono">
-                                            <span className="text-emerald-400 text-2xl font-black">{depot.ausfahrten_total}</span>
-                                            <span className="text-rose-400 text-2xl font-black">{depot.einfahrten_total}</span>
+                                            <span className="text-emerald-400 text-2xl font-black">{depot.ausfahrten_total.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
+                                            <span className="text-rose-400 text-2xl font-black">{depot.einfahrten_total.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -210,7 +290,7 @@ export default function GaragierungPage() {
                         {peakVehicles.map((item) => (
                             <div key={item.vehicle_type} className="flex justify-between items-center bg-bg-dark p-3 rounded-lg border border-border-dark/50 hover:border-orange-500/30 transition-colors">
                                 <Text className="text-white font-medium">{item.vehicle_type}</Text>
-                                <span className="px-4 py-2 rounded-md bg-orange-500/10 text-orange-400 font-black text-2xl border border-orange-500/20">{item.max_vehicles_needed}</span>
+                                <span className="px-4 py-2 rounded-md bg-orange-500/10 text-orange-400 font-black text-2xl border border-orange-500/20">{Math.round(item.max_vehicles_needed)}</span>
                             </div>
                         ))}
                     </div>
@@ -230,7 +310,7 @@ export default function GaragierungPage() {
                                     {line.vehicles.map(v => (
                                         <div key={v.type} className="flex justify-between items-center text-sm pl-2 border-l-2 border-primary/30">
                                             <Text className="text-text-muted truncate mr-2" title={v.type}>{v.type}</Text>
-                                            <span className="text-blue-400 font-bold whitespace-nowrap">{v.peak} Fzg.</span>
+                                            <span className="text-blue-400 font-bold whitespace-nowrap">{Math.round(v.peak)} Fzg.</span>
                                         </div>
                                     ))}
                                 </div>
@@ -248,41 +328,13 @@ export default function GaragierungPage() {
                         <AccordionHeader className="text-white font-medium hover:bg-white/5">
                             Detaillierte Ausfahrten Tabelle
                         </AccordionHeader>
-                        <AccordionBody className="p-0 border-t border-border-dark">
-                            <div className="overflow-x-auto max-h-[600px] custom-scrollbar">
-                                <Table>
-                                    <TableHead className="sticky top-0 bg-bg-card">
-                                        <TableRow className="border-border-dark">
-                                            <TableHeaderCell className="text-text-muted">Zeit</TableHeaderCell>
-                                            <TableHeaderCell className="text-text-muted">Umlauf</TableHeaderCell>
-                                            <TableHeaderCell className="text-text-muted">Linie</TableHeaderCell>
-                                            <TableHeaderCell className="text-text-muted">Depot</TableHeaderCell>
-                                            <TableHeaderCell className="text-text-muted">Fahrzeugtyp</TableHeaderCell>
-                                        </TableRow>
-                                    </TableHead>
-                                    <TableBody>
-                                        {ausfahrtenList.sort((a,b) => a.ausfahrt_zeit - b.ausfahrt_zeit).map((row, idx) => (
-                                            <TableRow key={`aus-${row.umlauf_id}-${idx}`} className="border-border-dark/50 hover:bg-white/5 transition-colors">
-                                                <TableCell>
-                                                    <span className="text-white font-mono">{formatTime(row.ausfahrt_zeit)}</span>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <span className="text-white font-medium">{row.umlauf_kuerzel}</span>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Badge color="blue" size="xs">Linie {row.line_no}</Badge>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Text className="text-text-muted">{row.depot_ausfahrt || '-'}</Text>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Badge color="gray" size="xs">{row.vehicle_type}</Badge>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </div>
+                        <AccordionBody className="p-4 border-t border-border-dark h-[500px]">
+                            <DataTable 
+                                data={ausfahrtenList}
+                                columns={ausfahrtenColumns}
+                                filterPlaceholder="Ausfahrten filtern..."
+                                initialSort={[{ id: 'ausfahrt_zeit', desc: false }]}
+                            />
                         </AccordionBody>
                     </Accordion>
 
@@ -290,41 +342,13 @@ export default function GaragierungPage() {
                         <AccordionHeader className="text-white font-medium hover:bg-white/5">
                             Detaillierte Einfahrten Tabelle
                         </AccordionHeader>
-                        <AccordionBody className="p-0 border-t border-border-dark">
-                            <div className="overflow-x-auto max-h-[600px] custom-scrollbar">
-                                <Table>
-                                    <TableHead className="sticky top-0 bg-bg-card">
-                                        <TableRow className="border-border-dark">
-                                            <TableHeaderCell className="text-text-muted">Zeit</TableHeaderCell>
-                                            <TableHeaderCell className="text-text-muted">Umlauf</TableHeaderCell>
-                                            <TableHeaderCell className="text-text-muted">Linie</TableHeaderCell>
-                                            <TableHeaderCell className="text-text-muted">Depot</TableHeaderCell>
-                                            <TableHeaderCell className="text-text-muted">Fahrzeugtyp</TableHeaderCell>
-                                        </TableRow>
-                                    </TableHead>
-                                    <TableBody>
-                                        {einfahrtenList.sort((a,b) => a.einfahrt_zeit - b.einfahrt_zeit).map((row, idx) => (
-                                            <TableRow key={`ein-${row.umlauf_id}-${idx}`} className="border-border-dark/50 hover:bg-white/5 transition-colors">
-                                                <TableCell>
-                                                    <span className="text-white font-mono">{formatTime(row.einfahrt_zeit)}</span>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <span className="text-white font-medium">{row.umlauf_kuerzel}</span>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Badge color="blue" size="xs">Linie {row.line_no}</Badge>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Text className="text-text-muted">{row.depot_einfahrt || '-'}</Text>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Badge color="gray" size="xs">{row.vehicle_type}</Badge>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </div>
+                        <AccordionBody className="p-4 border-t border-border-dark h-[500px]">
+                            <DataTable 
+                                data={einfahrtenList}
+                                columns={einfahrtenColumns}
+                                filterPlaceholder="Einfahrten filtern..."
+                                initialSort={[{ id: 'einfahrt_zeit', desc: false }]}
+                            />
                         </AccordionBody>
                     </Accordion>
                 </AccordionList>

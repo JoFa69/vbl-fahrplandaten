@@ -1334,9 +1334,10 @@ def get_garaging(
         where_clause = ""
         params = []
         if tagesart == "Mo-Do":
-            where_clause = "WHERE d.tagesart_abbr = 'Mo-Fr' AND d.wochentag_nr IN (0, 1, 2, 3)"
+            where_clause = "WHERE (d.tagesart_abbr = 'Mo-Fr' OR d.tagesart_abbr = 'Mo-Do') AND d.wochentag_nr IN (0, 1, 2, 3)"
         elif tagesart == "Fr":
-            where_clause = "WHERE d.tagesart_abbr = 'Mo-Fr' AND d.wochentag_nr = 4"
+            # Support both strategic (Mo-Fr with wochentag 4) and operative (direct 'Fr' label)
+            where_clause = "WHERE (d.tagesart_abbr = 'Mo-Fr' AND d.wochentag_nr = 4) OR d.tagesart_abbr = 'Fr'"
         elif tagesart == "Sa":
             where_clause = "WHERE d.tagesart_abbr = 'Sa'"
         elif tagesart == "So/Ft":
@@ -1344,7 +1345,7 @@ def get_garaging(
 
         query = f"""
         WITH valid_umlauf AS (
-            SELECT DISTINCT cs.umlauf_id
+            SELECT DISTINCT cs.umlauf_id, cs.day_id
             FROM cub_schedule cs
             JOIN dim_date d ON cs.day_id = d.day_id
             {where_clause}
@@ -1359,7 +1360,7 @@ def get_garaging(
                 cs.frt_start as ausfahrt_zeit,
                 v.vehicle_type
             FROM cub_schedule cs
-            JOIN valid_umlauf vu ON cs.umlauf_id = vu.umlauf_id
+            JOIN valid_umlauf vu ON cs.umlauf_id = vu.umlauf_id AND cs.day_id = vu.day_id
             JOIN dim_fahrt f ON cs.frt_id = f.frt_id
             JOIN dim_ort o ON cs.start_stop_id = o.stop_id
             LEFT JOIN dim_vehicle v ON cs.vehicle_id = v.vehicle_id
@@ -1374,7 +1375,7 @@ def get_garaging(
                 cs.frt_ende as einfahrt_zeit,
                 v.vehicle_type
             FROM cub_schedule cs
-            JOIN valid_umlauf vu ON cs.umlauf_id = vu.umlauf_id
+            JOIN valid_umlauf vu ON cs.umlauf_id = vu.umlauf_id AND cs.day_id = vu.day_id
             JOIN dim_fahrt f ON cs.frt_id = f.frt_id
             JOIN dim_ort o ON cs.end_stop_id = o.stop_id
             LEFT JOIN dim_vehicle v ON cs.vehicle_id = v.vehicle_id
@@ -1383,23 +1384,24 @@ def get_garaging(
         SELECT DISTINCT
             a.umlauf_id,
             a.li_id,
-            l.li_no as line_no,
+            l.li_abbr as line_no,
             a.depot_aus_ort || ', ' || a.depot_aus_name as depot_ausfahrt,
             e.depot_ein_ort || ', ' || e.depot_ein_name as depot_einfahrt,
             a.ausfahrt_zeit,
             e.einfahrt_zeit,
             a.vehicle_type,
-            u.umlauf_kuerzel
+            u.umlauf_kuerzel,
+            (a.depot_aus_ort || ', ' || a.depot_aus_name) != (e.depot_ein_ort || ', ' || e.depot_ein_name) as is_asymmetric
         FROM ausfahrten a
         LEFT JOIN einfahrten e ON a.umlauf_id = e.umlauf_id
         LEFT JOIN dim_line l ON a.li_id = l.li_id
         LEFT JOIN dim_umlauf u ON a.umlauf_id = u.umlauf_id
-        ORDER BY l.li_no, a.ausfahrt_zeit
+        ORDER BY l.li_abbr, a.ausfahrt_zeit
         """
         
         peak_query = f"""
         WITH valid_umlauf AS (
-            SELECT DISTINCT cs.umlauf_id
+            SELECT DISTINCT cs.umlauf_id, cs.day_id
             FROM cub_schedule cs
             JOIN dim_date d ON cs.day_id = d.day_id
             {where_clause}
@@ -1407,7 +1409,7 @@ def get_garaging(
         ausfahrten_distinct AS (
             SELECT DISTINCT v.vehicle_type, cs.umlauf_id, cs.frt_start as event_time
             FROM cub_schedule cs
-            JOIN valid_umlauf vu ON cs.umlauf_id = vu.umlauf_id
+            JOIN valid_umlauf vu ON cs.umlauf_id = vu.umlauf_id AND cs.day_id = vu.day_id
             JOIN dim_fahrt f ON cs.frt_id = f.frt_id
             LEFT JOIN dim_vehicle v ON cs.vehicle_id = v.vehicle_id
             WHERE f.fahrt_typ = 2
@@ -1415,7 +1417,7 @@ def get_garaging(
         einfahrten_distinct AS (
             SELECT DISTINCT v.vehicle_type, cs.umlauf_id, cs.frt_ende as event_time
             FROM cub_schedule cs
-            JOIN valid_umlauf vu ON cs.umlauf_id = vu.umlauf_id
+            JOIN valid_umlauf vu ON cs.umlauf_id = vu.umlauf_id AND cs.day_id = vu.day_id
             JOIN dim_fahrt f ON cs.frt_id = f.frt_id
             LEFT JOIN dim_vehicle v ON cs.vehicle_id = v.vehicle_id
             WHERE f.fahrt_typ = 3
@@ -1429,8 +1431,13 @@ def get_garaging(
             SELECT vehicle_type, event_time,
                    SUM(change) OVER (PARTITION BY vehicle_type ORDER BY event_time ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as active_vehicles
             FROM events
+        ),
+        day_count AS (
+            SELECT COUNT(DISTINCT day_id) as n_days FROM valid_umlauf
         )
-        SELECT vehicle_type, MAX(active_vehicles) as max_vehicles_needed
+        SELECT 
+            vehicle_type, 
+            MAX(active_vehicles) / (SELECT n_days FROM day_count) as max_vehicles_needed
         FROM running_sum
         WHERE vehicle_type IS NOT NULL
         GROUP BY vehicle_type
@@ -1439,7 +1446,7 @@ def get_garaging(
         
         depot_query = f"""
         WITH valid_umlauf AS (
-            SELECT DISTINCT cs.umlauf_id
+            SELECT DISTINCT cs.umlauf_id, cs.day_id
             FROM cub_schedule cs
             JOIN dim_date d ON cs.day_id = d.day_id
             {where_clause}
@@ -1447,6 +1454,7 @@ def get_garaging(
         ausfahrten AS (
             SELECT DISTINCT
                 cs.umlauf_id,
+                cs.day_id,
                 v.vehicle_type,
                 CASE 
                     WHEN o.stop_ort LIKE '%Luzern%' OR o.stop_name LIKE '%Weinbergli%' THEN 'Weinbergli'
@@ -1455,7 +1463,7 @@ def get_garaging(
                     ELSE o.stop_ort || ', ' || o.stop_name
                 END as depot_name
             FROM cub_schedule cs
-            JOIN valid_umlauf vu ON cs.umlauf_id = vu.umlauf_id
+            JOIN valid_umlauf vu ON cs.umlauf_id = vu.umlauf_id AND cs.day_id = vu.day_id
             JOIN dim_fahrt f ON cs.frt_id = f.frt_id
             JOIN dim_ort o ON cs.start_stop_id = o.stop_id
             LEFT JOIN dim_vehicle v ON cs.vehicle_id = v.vehicle_id
@@ -1464,6 +1472,7 @@ def get_garaging(
         einfahrten AS (
             SELECT DISTINCT
                 cs.umlauf_id,
+                cs.day_id,
                 v.vehicle_type,
                 CASE 
                     WHEN o.stop_ort LIKE '%Luzern%' OR o.stop_name LIKE '%Weinbergli%' THEN 'Weinbergli'
@@ -1472,39 +1481,43 @@ def get_garaging(
                     ELSE o.stop_ort || ', ' || o.stop_name
                 END as depot_name
             FROM cub_schedule cs
-            JOIN valid_umlauf vu ON cs.umlauf_id = vu.umlauf_id
+            JOIN valid_umlauf vu ON cs.umlauf_id = vu.umlauf_id AND cs.day_id = vu.day_id
             JOIN dim_fahrt f ON cs.frt_id = f.frt_id
             JOIN dim_ort o ON cs.end_stop_id = o.stop_id
             LEFT JOIN dim_vehicle v ON cs.vehicle_id = v.vehicle_id
             WHERE f.fahrt_typ = 3
+        ),
+        day_count AS (
+            SELECT COUNT(DISTINCT day_id) as n_days FROM valid_umlauf
         )
         SELECT 
             COALESCE(a.depot_name, e.depot_name) as depot,
             COALESCE(a.vehicle_type, e.vehicle_type) as vehicle_type,
-            COUNT(DISTINCT a.umlauf_id) as ausfahrten_count,
-            COUNT(DISTINCT e.umlauf_id) as einfahrten_count
+            CAST(COUNT(DISTINCT a.umlauf_id || '_' || a.day_id) AS FLOAT) / (SELECT n_days FROM day_count) as ausfahrten_count,
+            CAST(COUNT(DISTINCT e.umlauf_id || '_' || e.day_id) AS FLOAT) / (SELECT n_days FROM day_count) as einfahrten_count
         FROM ausfahrten a
-        FULL OUTER JOIN einfahrten e ON a.depot_name = e.depot_name AND a.umlauf_id = e.umlauf_id AND COALESCE(a.vehicle_type, '') = COALESCE(e.vehicle_type, '')
+        FULL OUTER JOIN einfahrten e ON a.depot_name = e.depot_name AND a.umlauf_id = e.umlauf_id AND a.day_id = e.day_id AND COALESCE(a.vehicle_type, '') = COALESCE(e.vehicle_type, '')
         GROUP BY 1, 2
         ORDER BY 1, 3 DESC NULLS LAST
         """
 
         peak_line_query = f"""
         WITH valid_umlauf AS (
-            SELECT DISTINCT cs.umlauf_id
+            SELECT DISTINCT cs.umlauf_id, cs.day_id
             FROM cub_schedule cs
             JOIN dim_date d ON cs.day_id = d.day_id
             {where_clause}
         ),
         trips_distinct AS (
             SELECT DISTINCT
-                l.li_no as line_no,
+                l.li_abbr as line_no,
                 v.vehicle_type,
                 cs.umlauf_id,
+                cs.day_id,
                 cs.frt_start as event_start,
                 cs.frt_ende as event_end
             FROM cub_schedule cs
-            JOIN valid_umlauf vu ON cs.umlauf_id = vu.umlauf_id
+            JOIN valid_umlauf vu ON cs.umlauf_id = vu.umlauf_id AND cs.day_id = vu.day_id
             JOIN dim_fahrt f ON cs.frt_id = f.frt_id
             LEFT JOIN dim_line l ON cs.li_id = l.li_id
             LEFT JOIN dim_vehicle v ON cs.vehicle_id = v.vehicle_id
@@ -1519,8 +1532,14 @@ def get_garaging(
             SELECT line_no, vehicle_type, event_time,
                    SUM(change) OVER (PARTITION BY line_no, vehicle_type ORDER BY event_time ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as active_vehicles
             FROM events
+        ),
+        day_count AS (
+            SELECT COUNT(DISTINCT day_id) as n_days FROM valid_umlauf
         )
-        SELECT line_no, vehicle_type, MAX(active_vehicles) as max_vehicles_needed
+        SELECT 
+            line_no, 
+            vehicle_type, 
+            MAX(active_vehicles) / (SELECT n_days FROM day_count) as max_vehicles_needed
         FROM running_sum
         WHERE line_no IS NOT NULL
         GROUP BY line_no, vehicle_type
@@ -1546,7 +1565,8 @@ def get_garaging(
                 "ausfahrt_zeit": row[5],
                 "einfahrt_zeit": row[6],
                 "vehicle_type": row[7] if row[7] else 'Unbekannt',
-                "umlauf_kuerzel": row[8] if row[8] else f"Umlauf {row[0]}"
+                "umlauf_kuerzel": row[8] if row[8] else f"Umlauf {row[0]}",
+                "is_asymmetric": bool(row[9])
             })
             
         peak_vehicles = []

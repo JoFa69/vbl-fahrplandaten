@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { fetchGeometryMetrics } from '../api';
 import { createColumnHelper } from '@tanstack/react-table';
-import GeometryTable from './GeometryTable';
+import DataTable from './DataTable';
 
 const columnHelper = createColumnHelper();
 
@@ -128,7 +128,7 @@ export default function GeometryMetrics({
             {loading ? <div className="text-slate-400">Lade Daten...</div> : (
                 <div className="flex-1 min-h-0">
                     {level === "variants" ? (
-                        <GeometryTable
+                        <DataTable
                             data={data}
                             columns={variantColumns}
                             onRowClick={onVariantSelect}
@@ -136,7 +136,7 @@ export default function GeometryMetrics({
                             initialSort={[{ id: 'line_no', desc: false }]}
                         />
                     ) : (
-                        <GeometryTable
+                        <DataTable
                             data={data}
                             columns={stopColumns}
                             filterPlaceholder="Suche Haltestelle..."
