@@ -11,6 +11,7 @@ import HaltestellenChartsPage from "./pages/HaltestellenChartsPage";
 import FahrplanVergleichPage from "./pages/FahrplanVergleichPage";
 import UmlaufPage from "./pages/UmlaufPage";
 import UmlaufChartsPage from "./pages/UmlaufChartsPage";
+import GaragierungPage from "./pages/GaragierungPage";
 import KorridorAnalysePage from "./pages/KorridorAnalysePage";
 import "./index.css";
 
@@ -31,6 +32,7 @@ function App() {
           <Route path="/korridor" element={<KorridorAnalysePage />} />
           <Route path="/umlaeufe" element={<UmlaufPage />} />
           <Route path="/umlaeufe/charts" element={<UmlaufChartsPage />} />
+          <Route path="/garagen" element={<GaragierungPage />} />
           <Route path="/einstellungen" element={<div className="p-8"><h2 className="text-2xl font-bold text-white">Einstellungen</h2><p className="text-text-muted mt-2">Konfiguration kommt bald.</p></div>} />
         </Route>
       </Routes>

@@ -245,3 +245,12 @@ export async function fetchCorridorBildfahrplan(stop_id_start, stop_id_end, tage
     if (!res.ok) throw new Error("Failed to fetch corridor bildfahrplan");
     return res.json();
 }
+
+export async function fetchGaragingData(tagesart = "Mo-Do") {
+    const params = new URLSearchParams();
+    if (tagesart) params.append("tagesart", tagesart);
+    
+    const res = await apiFetch(`${API_BASE}/analytics/garaging?${params.toString()}`);
+    if (!res.ok) throw new Error("Failed to fetch garaging data");
+    return res.json();
+}

@@ -1,8 +1,18 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { fetchCorridorBildfahrplan } from '../../api';
+import ReactEChartsCore from 'echarts-for-react/lib/core';
+import * as echarts from 'echarts/core';
+import { LineChart } from 'echarts/charts';
 import {
-    ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Brush
-} from 'recharts';
+    GridComponent,
+    TooltipComponent,
+    DataZoomComponent,
+    LegendComponent
+} from 'echarts/components';
+import { CanvasRenderer } from 'echarts/renderers';
+
+// Register ECharts modules
+echarts.use([LineChart, GridComponent, TooltipComponent, DataZoomComponent, LegendComponent, CanvasRenderer]);
 
 const getColorForLine = (lineNo) => {
     const palette = [
@@ -43,8 +53,6 @@ const parseTimeToSeconds = (timeStr) => {
     return h * 3600 + m * 60;
 };
 
-// Custom Tooltip removed, now using local state overlay in the main component.
-
 export default function BildfahrplanChart({
     startStopId,
     endStopId,
@@ -57,19 +65,15 @@ export default function BildfahrplanChart({
     globalTimeTo,
     setGlobalTimeTo
 }) {
-    // === ALL HOOKS BEFORE EARLY RETURNS ===
     const [trips, setTrips] = useState([]);
     const [stopsDict, setStopsDict] = useState({});
     const [loading, setLoading] = useState(false);
-
-    // Controls state
-    const [brushIndex, setBrushIndex] = useState({ startIndex: 0, endIndex: 0 });
-    const [tooltip, setTooltip] = useState(null);
-    const chartRef = React.useRef(null);
-
-    // Line Filter state (now managed globally via hiddenLines)
     const [availableLines, setAvailableLines] = useState([]);
+    const echartRef = useRef(null);
+    // Track whether zoom was triggered internally to avoid circular updates
+    const zoomFromSlider = useRef(false);
 
+    // Data fetching — identical to previous implementation
     useEffect(() => {
         if (!startStopId || !endStopId) return;
 
@@ -83,21 +87,17 @@ export default function BildfahrplanChart({
                     fetchedTrips = fetchedTrips.filter(t => !t.is_depot_run);
                 }
 
-                // Extract unique lines for filter
                 const uniqueLines = Array.from(new Set(fetchedTrips.map(t => String(t.li_no)))).sort();
                 setAvailableLines(uniqueLines);
 
-                // Calculate total korridor_fahrzeit for each trip
+                // Calculate korridor_fahrzeit for each trip
                 fetchedTrips.forEach(t => {
                     const sortedPoints = [...t.points].sort((a, b) => a.li_lfd_nr - b.li_lfd_nr);
                     if (sortedPoints.length > 0) {
                         const firstPt = sortedPoints[0];
                         const lastPt = sortedPoints[sortedPoints.length - 1];
-
-                        // Fallbacks: ankunft is typically the end time, abfahrt the start time.
                         const startTime = firstPt.abfahrt ?? firstPt.ankunft;
                         const endTime = lastPt.ankunft ?? lastPt.abfahrt;
-
                         if (startTime != null && endTime != null && endTime >= startTime) {
                             t.korridor_fahrzeit = endTime - startTime;
                         } else {
@@ -108,7 +108,7 @@ export default function BildfahrplanChart({
                     }
                 });
 
-                // Build Y-axis: group by stop_abbr instead of stop_id to avoid duplicates
+                // Build stop dictionary
                 let longestTrip = fetchedTrips[0];
                 fetchedTrips.forEach(t => {
                     if (!longestTrip || t.points.length > longestTrip.points.length) {
@@ -139,12 +139,11 @@ export default function BildfahrplanChart({
         load();
     }, [startStopId, endStopId, tagesart, showDepotRuns]);
 
-    // Apply Line Filter
+    // Apply line filter
     const filteredTrips = useMemo(() => {
         if (!hiddenLines) return trips;
         return trips.filter(t => !hiddenLines.has(String(t.li_no)));
     }, [trips, hiddenLines]);
-
 
     const toggleLine = (lineNo) => {
         setHiddenLines?.(prev => {
@@ -162,14 +161,12 @@ export default function BildfahrplanChart({
     const toggleAll = () => {
         const visibleCount = availableLines.filter(l => !hiddenLines?.has(String(l))).length;
         if (visibleCount < availableLines.length) {
-            // Show all current lines
             setHiddenLines?.(prev => {
                 const next = new Set(prev);
                 availableLines.forEach(l => next.delete(String(l)));
                 return next;
             });
         } else {
-            // Hide all current lines
             setHiddenLines?.(prev => {
                 const next = new Set(prev);
                 availableLines.forEach(l => next.add(String(l)));
@@ -178,14 +175,10 @@ export default function BildfahrplanChart({
         }
     };
 
-    // Compute brushData from ALL trips so the timeline stays stable when filtering
-    // Generate fixed 1-minute intervals for brush axis (Performance Optimization)
-    const brushData = useMemo(() => {
-        if (trips.length === 0) return [];
-
+    // Compute time range
+    const timeRange = useMemo(() => {
         let minTime = Infinity;
         let maxTime = -Infinity;
-
         trips.forEach(trip => {
             trip.points.forEach(p => {
                 if (p.abfahrt != null) {
@@ -194,249 +187,312 @@ export default function BildfahrplanChart({
                 }
             });
         });
-
-        if (minTime === Infinity || maxTime === -Infinity) return [];
-
-        // Floor to nearest minute for clean start
-        let current = Math.floor(minTime / 60) * 60;
-        const end = Math.ceil(maxTime / 60) * 60;
-
-        const intervals = [];
-        while (current <= end) {
-            intervals.push({ x: current });
-            current += 60; // 1-minute steps
-        }
-
-        return intervals;
+        if (minTime === Infinity || maxTime === -Infinity) return null;
+        return { min: Math.floor(minTime / 60) * 60, max: Math.ceil(maxTime / 60) * 60 };
     }, [trips]);
 
-    // Setup brush limits based on new data or existing global time
-    useEffect(() => {
-        if (brushData.length > 0) {
-            if (!globalTimeFrom && !globalTimeTo) {
-                // Initial load: Set to full spectrum if no persistent time selected
-                setBrushIndex({ startIndex: 0, endIndex: brushData.length - 1 });
-                setGlobalTimeFrom?.(formatSeconds(brushData[0].x));
-                setGlobalTimeTo?.(formatSeconds(brushData[brushData.length - 1].x));
-            } else {
-                // Restore persistent zoom from localStorage strings
-                let startIdx = 0;
-                let endIdx = brushData.length - 1;
-
-                if (globalTimeFrom) {
-                    const secFrom = parseTimeToSeconds(globalTimeFrom);
-                    if (secFrom != null) {
-                        let bestIdx = 0;
-                        let bestDiff = Infinity;
-                        brushData.forEach((d, i) => {
-                            const diff = Math.abs(d.x - secFrom);
-                            if (diff < bestDiff) { bestDiff = diff; bestIdx = i; }
-                        });
-                        startIdx = bestIdx;
-                    }
-                }
-                if (globalTimeTo) {
-                    const secTo = parseTimeToSeconds(globalTimeTo);
-                    if (secTo != null) {
-                        let bestIdx = brushData.length - 1;
-                        let bestDiff = Infinity;
-                        brushData.forEach((d, i) => {
-                            const diff = Math.abs(d.x - secTo);
-                            if (diff < bestDiff) { bestDiff = diff; bestIdx = i; }
-                        });
-                        endIdx = bestIdx;
-                    }
-                }
-                setBrushIndex({ startIndex: startIdx, endIndex: endIdx });
-            }
-        }
-    }, [brushData, globalTimeFrom, globalTimeTo, setGlobalTimeFrom, setGlobalTimeTo]);
-
-    // Compute zoom domain
-    const zoomDomain = useMemo(() => {
-        if (brushData.length > 0) {
-            const startIdx = Math.min(brushIndex.startIndex || 0, brushData.length - 1);
-            const endIdx = Math.min(brushIndex.endIndex || 0, brushData.length - 1);
-            const start = brushData[startIdx];
-            const end = brushData[endIdx];
-
-            if (startIdx === 0 && endIdx === brushData.length - 1) {
-                return ['dataMin - 600', 'dataMax + 600'];
-            }
-            if (start && end) {
-                return [start.x, end.x];
-            }
-        }
-        return ['dataMin - 600', 'dataMax + 600'];
-    }, [brushData, brushIndex]);
-
-    // Compute Y-axis data
-    const stopIndices = useMemo(() => {
-        return Object.keys(stopsDict).map(k => stopsDict[k].index).sort((a, b) => b - a);
+    // Compute stop indices for Y-axis
+    const maxY = useMemo(() => {
+        const indices = Object.keys(stopsDict).map(k => stopsDict[k].index);
+        return indices.length > 0 ? Math.max(...indices) : 0;
     }, [stopsDict]);
-    const maxY = stopIndices.length > 0 ? Math.max(...stopIndices) : 0;
 
-    // Flatten all points of all visible trips for math-based Euclidean hover detection
-    // This replaces the 6,000 individual SVG circle DOM nodes with a single O(n) scan
-    const allVisiblePoints = useMemo(() => {
-        const points = [];
-        filteredTrips.forEach(trip => {
-            trip.points.forEach(p => {
-                const key = p.stop_abbr || p.stop_id;
-                if (stopsDict[key]) {
-                    points.push({
-                        timeSec: p.abfahrt,
-                        stopIdx: stopsDict[key].index,
-                        payload: {
-                            x: p.abfahrt,
-                            y: stopsDict[key].index,
-                            li_no: trip.li_no,
-                            is_depot_run: trip.is_depot_run,
-                            stop_text: p.stop_text,
-                            schedule_id: trip.schedule_id,
-                            richtung: trip.richtung,
-                            fahrt_start: trip.fahrt_start,
-                            fahrt_end: trip.fahrt_end,
-                            korridor_fahrzeit: trip.korridor_fahrzeit
-                        }
-                    });
-                }
-            });
+    // Initialize global time when data loads
+    useEffect(() => {
+        if (timeRange && !globalTimeFrom && !globalTimeTo) {
+            setGlobalTimeFrom?.(formatSeconds(timeRange.min));
+            setGlobalTimeTo?.(formatSeconds(timeRange.max));
+        }
+    }, [timeRange, globalTimeFrom, globalTimeTo, setGlobalTimeFrom, setGlobalTimeTo]);
+
+    // Compute zoom percent from global time
+    const zoomPercent = useMemo(() => {
+        if (!timeRange) return { start: 0, end: 100 };
+        const totalRange = timeRange.max - timeRange.min;
+        if (totalRange <= 0) return { start: 0, end: 100 };
+
+        let start = 0;
+        let end = 100;
+
+        if (globalTimeFrom) {
+            const sec = parseTimeToSeconds(globalTimeFrom);
+            if (sec != null) {
+                start = Math.max(0, ((sec - timeRange.min) / totalRange) * 100);
+            }
+        }
+        if (globalTimeTo) {
+            const sec = parseTimeToSeconds(globalTimeTo);
+            if (sec != null) {
+                end = Math.min(100, ((sec - timeRange.min) / totalRange) * 100);
+            }
+        }
+        return { start, end };
+    }, [timeRange, globalTimeFrom, globalTimeTo]);
+
+    // Build ECharts series from filtered trips
+    const series = useMemo(() => {
+        return filteredTrips.map(trip => {
+            const lineData = trip.points
+                .filter(p => {
+                    const key = p.stop_abbr || p.stop_id;
+                    return stopsDict[key] !== undefined;
+                })
+                .map(p => {
+                    const key = p.stop_abbr || p.stop_id;
+                    return {
+                        value: [p.abfahrt, stopsDict[key].index],
+                        li_no: trip.li_no,
+                        is_depot_run: trip.is_depot_run,
+                        stop_text: p.stop_text,
+                        schedule_id: trip.schedule_id,
+                        richtung: trip.richtung,
+                        fahrt_start: trip.fahrt_start,
+                        fahrt_end: trip.fahrt_end,
+                        korridor_fahrzeit: trip.korridor_fahrzeit
+                    };
+                });
+
+            const color = getColorForLine(trip.li_no);
+            return {
+                type: 'line',
+                data: lineData,
+                symbol: 'circle',
+                symbolSize: 10,
+                showSymbol: true, // Must be true so ECharts renders them for hit-testing
+                triggerLineEvent: true, // Allow the line itself to trigger the tooltip
+                itemStyle: {
+                    color: color,
+                    opacity: 0 // Invisible but clickable/hoverable
+                },
+                lineStyle: {
+                    width: trip.is_depot_run ? 1.5 : 2,
+                    type: trip.is_depot_run ? 'dashed' : 'solid',
+                    opacity: trip.is_depot_run ? 0.6 : 0.85,
+                    color: color
+                },
+                emphasis: {
+                    itemStyle: {
+                        opacity: 1,
+                        borderColor: '#ffffff',
+                        borderWidth: 2
+                    },
+                    lineStyle: {
+                        width: 3.5,
+                        opacity: 1
+                    }
+                },
+                silent: false,
+                animation: false,
+                z: trip.is_depot_run ? 1 : 2
+            };
         });
-        return points;
     }, [filteredTrips, stopsDict]);
 
-    // Single mouse listener to find nearest data point via Euclidean distance
-    const handleMouseMove = useCallback((e) => {
-        if (!chartRef.current || allVisiblePoints.length === 0) return;
+    // Y-axis label lookup
+    const yAxisLabels = useMemo(() => {
+        const labels = {};
+        Object.keys(stopsDict).forEach(k => {
+            labels[stopsDict[k].index] = stopsDict[k].text;
+        });
+        return labels;
+    }, [stopsDict]);
 
-        const rect = chartRef.current.getBoundingClientRect();
-        const cursorX = e.clientX;
-        const cursorY = e.clientY;
+    // Handle dataZoom changes from ECharts slider
+    const onDataZoom = useCallback((params) => {
+        if (!timeRange) return;
+        const totalRange = timeRange.max - timeRange.min;
 
-        // Recharts margin: { top: 10, right: 30, bottom: 20, left: 60 }
-        const chartLeft = rect.left + 60;
-        const chartRight = rect.right - 30;
-        const chartTop = rect.top + 10;
-        const chartBottom = rect.bottom - 80;
-
-        const chartWidth = chartRight - chartLeft;
-        const chartHeight = chartBottom - chartTop;
-
-        if (cursorX < chartLeft || cursorX > chartRight || cursorY < chartTop || cursorY > chartBottom || chartWidth <= 0 || chartHeight <= 0) {
-            setTooltip(null);
-            return;
-        }
-
-        // Convert pixel position to data domain values
-        const xDomain = zoomDomain;
-        const xMin = typeof xDomain[0] === 'number' ? xDomain[0] : 0;
-        const xMax = typeof xDomain[1] === 'number' ? xDomain[1] : 86400;
-        const domainXRange = xMax - xMin;
-        const domainYRange = maxY || 1;
-
-        let nearestPt = null;
-        let minDistSq = Infinity;
-        const maxDistSq = 15 * 15; // 15px hover radius
-
-        for (let i = 0; i < allVisiblePoints.length; i++) {
-            const pt = allVisiblePoints[i];
-            if (pt.timeSec < xMin || pt.timeSec > xMax) continue;
-
-            const ptPctX = (pt.timeSec - xMin) / domainXRange;
-            const ptPxX = chartLeft + (ptPctX * chartWidth);
-
-            const ptPctY = pt.stopIdx / domainYRange;
-            const ptPxY = chartTop + (ptPctY * chartHeight);
-
-            const dx = ptPxX - cursorX;
-            const dy = ptPxY - cursorY;
-            const distSq = dx * dx + dy * dy;
-
-            if (distSq < minDistSq && distSq <= maxDistSq) {
-                minDistSq = distSq;
-                nearestPt = pt;
-            }
-        }
-
-        if (nearestPt) {
-            setTooltip({ x: cursorX, y: cursorY, data: nearestPt.payload });
+        // ECharts may provide dataZoom in batch or single event
+        let startPct, endPct;
+        if (params.batch) {
+            startPct = params.batch[0].start;
+            endPct = params.batch[0].end;
         } else {
-            setTooltip(null);
+            startPct = params.start;
+            endPct = params.end;
         }
-    }, [allVisiblePoints, zoomDomain, maxY]);
 
-    const handleBrushChange = useCallback((e) => {
-        if (e && e.startIndex !== undefined && e.endIndex !== undefined) {
-            setBrushIndex(prev => {
-                if (prev.startIndex === e.startIndex && prev.endIndex === e.endIndex) return prev;
-                return { startIndex: e.startIndex, endIndex: e.endIndex };
-            });
-            // Sync time fields globally
-            if (brushData.length > 0) {
-                const si = Math.min(e.startIndex, brushData.length - 1);
-                const ei = Math.min(e.endIndex, brushData.length - 1);
-                if (brushData[si]) setGlobalTimeFrom?.(formatSeconds(brushData[si].x));
-                if (brushData[ei]) setGlobalTimeTo?.(formatSeconds(brushData[ei].x));
-            }
-        }
-    }, [brushData, setGlobalTimeFrom, setGlobalTimeTo]);
+        if (startPct == null || endPct == null) return;
 
-    // Handle manual time input from UI fields
+        const fromSec = timeRange.min + (startPct / 100) * totalRange;
+        const toSec = timeRange.min + (endPct / 100) * totalRange;
+
+        zoomFromSlider.current = true;
+        setGlobalTimeFrom?.(formatSeconds(fromSec));
+        setGlobalTimeTo?.(formatSeconds(toSec));
+        // Reset after a tick to allow the effect to skip
+        requestAnimationFrame(() => { zoomFromSlider.current = false; });
+    }, [timeRange, setGlobalTimeFrom, setGlobalTimeTo]);
+
+    // Build ECharts option
+    const option = useMemo(() => {
+        if (trips.length === 0) return {};
+
+        const stopTicks = Object.keys(stopsDict)
+            .map(k => stopsDict[k].index)
+            .sort((a, b) => a - b);
+
+        return {
+            animation: false,
+            grid: {
+                top: 10,
+                right: 30,
+                bottom: 80,
+                left: 110
+            },
+            xAxis: {
+                type: 'value',
+                min: timeRange ? timeRange.min - 300 : undefined,
+                max: timeRange ? timeRange.max + 300 : undefined,
+                axisLabel: {
+                    formatter: (v) => formatSeconds(v),
+                    color: '#9CA3AF',
+                    fontSize: 12
+                },
+                axisLine: { lineStyle: { color: '#374151' } },
+                splitLine: { lineStyle: { color: '#374151', type: 'dashed' } }
+            },
+            yAxis: {
+                type: 'value',
+                min: -0.2,
+                max: maxY + 0.2,
+                inverse: true,
+                axisLabel: {
+                    formatter: (v) => {
+                        const rounded = Math.round(v);
+                        if (rounded !== v) return '';
+                        return yAxisLabels[rounded] ? yAxisLabels[rounded].substring(0, 18) : '';
+                    },
+                    color: '#9CA3AF',
+                    fontSize: 11
+                },
+                axisLine: { lineStyle: { color: '#374151' } },
+                splitLine: { lineStyle: { color: '#1F2937', type: 'dashed' } },
+                interval: 1
+            },
+            tooltip: {
+                trigger: 'item',
+                backgroundColor: '#111318',
+                borderColor: '#374151',
+                borderWidth: 1,
+                textStyle: { color: '#ffffff', fontSize: 12 },
+                confine: true,
+                formatter: (params) => {
+                    const d = params.data;
+                    if (!d) return '';
+                    const color = getColorForLine(d.li_no);
+                    const rows = [
+                        `<div style="font-weight:700;font-size:13px;margin-bottom:6px">${d.stop_text || ''}</div>`,
+                        `<div style="display:grid;grid-template-columns:auto auto;gap:2px 12px;font-size:11px">`,
+                        `<span style="color:#9CA3AF">Zeit:</span><span style="font-family:monospace;font-weight:700">${formatSeconds(d.value[0])} Uhr</span>`,
+                        `<span style="color:#9CA3AF">Linie:</span><span style="font-weight:700;background:${color};padding:1px 8px;border-radius:4px;display:inline-block">${d.li_no}</span>`,
+                        `<span style="color:#9CA3AF">Fahrt-ID:</span><span style="font-family:monospace">${d.schedule_id}</span>`,
+                    ];
+                    if (d.richtung != null) {
+                        const rText = d.richtung === 1 ? 'Hin' : d.richtung === 2 ? 'Rück' : d.richtung;
+                        rows.push(`<span style="color:#9CA3AF">Richtung:</span><span>${rText}</span>`);
+                    }
+                    if (d.korridor_fahrzeit != null) {
+                        rows.push(`<span style="color:#9CA3AF;border-top:1px solid #374151;padding-top:4px;margin-top:4px">Korridor-Fahrzeit:</span><span style="color:#3F83F8;font-weight:700;border-top:1px solid #374151;padding-top:4px;margin-top:4px">${formatFahrzeit(d.korridor_fahrzeit)}</span>`);
+                    }
+                    if (d.fahrt_start) {
+                        rows.push(`<span style="color:#9CA3AF">Von:</span><span style="color:#3F83F8;font-size:10px">${d.fahrt_start}</span>`);
+                    }
+                    if (d.fahrt_end) {
+                        rows.push(`<span style="color:#9CA3AF">Nach:</span><span style="color:#3F83F8;font-size:10px">${d.fahrt_end}</span>`);
+                    }
+                    if (d.is_depot_run) {
+                        rows.push(`<span style="color:#9CA3AF">Typ:</span><span style="color:#FBBF24;font-style:italic">Ein-/Aussetzer</span>`);
+                    }
+                    rows.push('</div>');
+                    return rows.join('');
+                }
+            },
+            dataZoom: [
+                {
+                    type: 'slider',
+                    xAxisIndex: 0,
+                    start: zoomPercent.start,
+                    end: zoomPercent.end,
+                    height: 25,
+                    bottom: 10,
+                    borderColor: '#374151',
+                    backgroundColor: '#111318',
+                    fillerColor: 'rgba(63,131,248,0.15)',
+                    handleStyle: { color: '#3F83F8' },
+                    textStyle: { color: '#9CA3AF', fontSize: 11 },
+                    labelFormatter: (v) => formatSeconds(v),
+                    brushSelect: false
+                }
+            ],
+            series: series
+        };
+    }, [trips, filteredTrips, stopsDict, series, maxY, yAxisLabels, timeRange, zoomPercent]);
+
+    // Handle time input changes
     const handleTimeFromChange = useCallback((value) => {
+        const sec = parseTimeToSeconds(value);
+        if (sec == null || !timeRange) return;
         setGlobalTimeFrom?.(value);
-    }, [setGlobalTimeFrom]);
+    }, [timeRange, setGlobalTimeFrom]);
 
     const handleTimeToChange = useCallback((value) => {
-        setGlobalTimeTo?.(value);
         const sec = parseTimeToSeconds(value);
-        if (sec != null && brushData.length > 0) {
-            let bestIdx = brushData.length - 1;
-            let bestDiff = Infinity;
-            brushData.forEach((d, i) => {
-                const diff = Math.abs(d.x - sec);
-                if (diff < bestDiff) { bestDiff = diff; bestIdx = i; }
-            });
-            setBrushIndex(prev => ({ ...prev, endIndex: bestIdx }));
-        }
-    }, [brushData]);
+        if (sec == null || !timeRange) return;
+        setGlobalTimeTo?.(value);
+    }, [timeRange, setGlobalTimeTo]);
 
-    // === EARLY RETURNS ===
+    // Sync ECharts zoom when global time changes externally (from input fields)
+    useEffect(() => {
+        if (zoomFromSlider.current) return;
+        const inst = echartRef.current?.getEchartsInstance?.();
+        if (!inst || !timeRange) return;
+
+        inst.dispatchAction({
+            type: 'dataZoom',
+            start: zoomPercent.start,
+            end: zoomPercent.end
+        });
+    }, [zoomPercent, timeRange]);
+
+    // Early returns AFTER all hooks
     if (!startStopId || !endStopId) {
         return (
-            <div className="h-full flex flex-col items-center justify-center text-text-muted text-sm border-2 border-dashed border-border-dark rounded-xl bg-surface-dark/50">
-                <span className="material-symbols-outlined text-4xl mb-2 opacity-50">swap_calls</span>
-                Bitte Start- und Ziel-Haltestelle definieren.
+            <div id="bildfahrplan-chart" className="w-full h-full flex items-center justify-center text-text-muted text-sm">
+                <p>Bitte Start- und Ziel-Haltestelle wählen.</p>
             </div>
         );
     }
 
     if (loading) {
         return (
-            <div className="h-full flex justify-center items-center">
-                <span className="material-symbols-outlined animate-spin text-3xl text-primary">progress_activity</span>
+            <div id="bildfahrplan-chart" className="w-full h-full flex items-center justify-center text-text-muted">
+                <div className="flex items-center gap-2">
+                    <svg className="animate-spin h-5 w-5 text-primary" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Lade Bildfahrplan…
+                </div>
             </div>
         );
     }
 
     if (trips.length === 0) {
         return (
-            <div className="h-full flex items-center justify-center text-text-muted text-sm">
-                Keine Direktverbindungen für diese Auswahl gefunden.
+            <div id="bildfahrplan-chart" className="w-full h-full flex items-center justify-center text-text-muted text-sm">
+                <p>Keine Fahrten für diese Korridor-Auswahl gefunden.</p>
             </div>
         );
     }
 
     return (
-        <div
-            className="flex flex-col h-full relative"
-        >
-            {/* Control Header */}
-            <div className="flex items-center gap-6 mb-3">
-                {/* Time filter inputs */}
-                <div className="flex items-center gap-4 bg-[#111318] px-3 py-1.5 rounded-lg border border-border-dark/50">
+        <div id="bildfahrplan-chart" className="w-full h-full flex flex-col">
+            {/* Controls row */}
+            <div className="flex flex-wrap items-center gap-3 mb-2 px-1">
+                {/* Time inputs */}
+                <div className="flex items-center gap-3 bg-[#111318] rounded-lg px-3 py-1.5 border border-border-dark">
                     <div className="flex items-center gap-2">
-                        <span className="material-symbols-outlined text-slate-500 text-sm">schedule</span>
                         <label className="text-xs text-slate-400">Von:</label>
                         <input
                             type="time"
@@ -457,7 +513,7 @@ export default function BildfahrplanChart({
                     </div>
                 </div>
 
-                {/* Line Filter Input (Pills) */}
+                {/* Line Filter Pills */}
                 {availableLines.length > 1 && (
                     <div className="flex flex-wrap items-center gap-2">
                         <span className="text-xs text-slate-400 mr-1">Linien:</span>
@@ -474,7 +530,7 @@ export default function BildfahrplanChart({
                                 <button
                                     key={lineNo}
                                     onClick={() => toggleLine(lineNo)}
-                                    className={`px-3 py-1 text-xs font-bold rounded-full transition-colors flex items-center gap-1.5`}
+                                    className="px-3 py-1 text-xs font-bold rounded-full transition-colors flex items-center gap-1.5"
                                     style={{
                                         backgroundColor: isVisible ? `${color}30` : 'transparent',
                                         color: isVisible ? color : '#9CA3AF',
@@ -489,158 +545,22 @@ export default function BildfahrplanChart({
                     </div>
                 )}
 
-                <span className="text-[10px] text-slate-500 ml-auto hidden md:block">Hovern für Details • Bildbereich kann per Schieber unten markiert werden</span>
+                <span className="text-[10px] text-slate-500 ml-auto hidden md:block">Hovern für Details • Zeitbereich kann per Schieber unten eingestellt werden</span>
             </div>
 
-            <div
-                className="flex-1 relative"
-                ref={chartRef}
-                onMouseMove={handleMouseMove}
-                onMouseLeave={() => setTooltip(null)}
-            >
-                <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart
-                        margin={{ top: 10, right: 30, bottom: 20, left: 60 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                        <XAxis
-                            type="number"
-                            dataKey="x"
-                            name="Zeit"
-                            domain={zoomDomain}
-                            allowDataOverflow={true}
-                            tickCount={24}
-                            stroke="#9CA3AF"
-                            tick={{ fill: '#9CA3AF', fontSize: 12 }}
-                            tickFormatter={(val) => formatSeconds(val)}
-                        />
-                        <YAxis
-                            type="number"
-                            dataKey="y"
-                            name="Haltestelle"
-                            domain={[0, maxY]}
-                            reversed={true}
-                            stroke="#9CA3AF"
-                            tick={{ fill: '#9CA3AF', fontSize: 11 }}
-                            tickCount={stopIndices.length || 1}
-                            tickFormatter={(val) => {
-                                const stopKey = Object.keys(stopsDict).find(k => stopsDict[k].index === val);
-                                return stopKey ? stopsDict[stopKey].text.substring(0, 15) : '';
-                            }}
-                        />
-                        {/* Custom SVG circles implement their own HTML Tooltips below to bypass Recharts caching bugs */}
-
-                        {/* Generate Line components directly here to ensure Recharts binds events correctly */}
-                        {filteredTrips.map((trip) => {
-                            const lineData = trip.points
-                                .filter(p => {
-                                    const key = p.stop_abbr || p.stop_id;
-                                    return stopsDict[key] !== undefined;
-                                })
-                                .map(p => {
-                                    const key = p.stop_abbr || p.stop_id;
-                                    return {
-                                        x: p.abfahrt,
-                                        y: stopsDict[key].index,
-                                        li_no: trip.li_no,
-                                        is_depot_run: trip.is_depot_run,
-                                        stop_text: p.stop_text,
-                                        schedule_id: trip.schedule_id,
-                                        richtung: trip.richtung,
-                                        fahrt_start: trip.fahrt_start,
-                                        fahrt_end: trip.fahrt_end,
-                                        korridor_fahrzeit: trip.korridor_fahrzeit
-                                    };
-                                });
-
-                            return (
-                                <Line
-                                    key={`line-${trip.schedule_id}`}
-                                    type="linear"
-                                    name={`Linie ${trip.li_no}${trip.is_depot_run ? ' (Depot)' : ''}`}
-                                    data={lineData}
-                                    dataKey="y"
-                                    stroke={getColorForLine(trip.li_no)}
-                                    // Make tooltip easier to trigger by having a thicker invisible hover area
-                                    strokeWidth={trip.is_depot_run ? 2.0 : 2.5}
-                                    strokeDasharray={trip.is_depot_run ? "5 5" : "0"}
-                                    dot={false}
-                                    activeDot={false}
-                                    opacity={trip.is_depot_run ? 0.6 : 0.9}
-                                    isAnimationActive={false}
-                                />
-                            );
-                        })}
-
-                        <Brush
-                            data={brushData}
-                            dataKey="x"
-                            height={30}
-                            stroke="#9CA3AF"
-                            fill="#111318"
-                            tickFormatter={(val) => formatSeconds(val)}
-                            onChange={handleBrushChange}
-                            startIndex={brushIndex.startIndex}
-                            endIndex={brushIndex.endIndex}
-                        />
-                    </ComposedChart>
-                </ResponsiveContainer>
+            {/* ECharts Canvas */}
+            <div className="flex-1 relative" style={{ minHeight: 300 }}>
+                <ReactEChartsCore
+                    ref={echartRef}
+                    echarts={echarts}
+                    option={option}
+                    style={{ width: '100%', height: '100%' }}
+                    notMerge={true}
+                    lazyUpdate={true}
+                    onEvents={{ dataZoom: onDataZoom }}
+                    opts={{ renderer: 'canvas' }}
+                />
             </div>
-
-            {/* Custom Tooltip Overlay rendered via standard React */}
-            {tooltip && tooltip.data && (
-                <div
-                    className="fixed z-50 bg-[#111318] border border-border-dark p-3 rounded-xl shadow-xl min-w-[220px] pointer-events-none transition-opacity duration-150"
-                    style={{ top: tooltip.y + 15, left: tooltip.x + 15, opacity: 1 }}
-                >
-                    <p className="text-white font-bold mb-2">{tooltip.data.stop_text}</p>
-                    <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
-                        <span className="text-slate-400">Zeit:</span>
-                        <span className="font-bold text-white font-mono">{formatSeconds(tooltip.data.x)} Uhr</span>
-
-                        <span className="text-slate-400">Linie:</span>
-                        <span className="font-bold text-white px-2 py-0.5 rounded inline-block" style={{ backgroundColor: getColorForLine(tooltip.data.li_no) }}>
-                            {tooltip.data.li_no}
-                        </span>
-
-                        <span className="text-slate-400">Fahrt-ID:</span>
-                        <span className="text-white font-mono">{tooltip.data.schedule_id}</span>
-
-                        {tooltip.data.richtung != null && (
-                            <>
-                                <span className="text-slate-400">Richtung:</span>
-                                <span className="text-white">{tooltip.data.richtung === 1 ? 'Hin' : tooltip.data.richtung === 2 ? 'Rück' : tooltip.data.richtung}</span>
-                            </>
-                        )}
-
-                        {tooltip.data.korridor_fahrzeit != null && (
-                            <>
-                                <span className="text-slate-400 mt-1 border-t border-border-dark pt-1">Korridor-Fahrzeit:</span>
-                                <span className="text-primary mt-1 border-t border-border-dark pt-1 font-bold">{formatFahrzeit(tooltip.data.korridor_fahrzeit)}</span>
-                            </>
-                        )}
-
-                        {tooltip.data.fahrt_start && (
-                            <>
-                                <span className="text-slate-400 mt-1">Von:</span>
-                                <span className="text-primary/80 mt-1 text-[10px] leading-tight flex items-center">{tooltip.data.fahrt_start}</span>
-                            </>
-                        )}
-                        {tooltip.data.fahrt_end && (
-                            <>
-                                <span className="text-slate-400">Nach:</span>
-                                <span className="text-primary/80 text-[10px] leading-tight flex items-center">{tooltip.data.fahrt_end}</span>
-                            </>
-                        )}
-
-                        {tooltip.data.is_depot_run && (
-                            <>
-                                <span className="text-slate-400 mt-1">Typ:</span>
-                                <span className="text-amber-400 italic mt-1">Ein-/Aussetzer</span>
-                            </>
-                        )}
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

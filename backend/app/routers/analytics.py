@@ -1321,4 +1321,265 @@ def get_corridor_bildfahrplan(
         print(f"Corridor Bildfahrplan Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/garaging")
+def get_garaging(
+    tagesart: str = Query("Mo-Do", description="Tagesart filter (Mo-Do, Fr, Sa, So/Ft)"),
+    x_scenario: str = Header("strategic")
+):
+    """
+    Get garaging data: Ausfahrten and Einfahrten per Umlauf and Depot.
+    """
+    con = get_db(x_scenario)
+    try:
+        where_clause = ""
+        params = []
+        if tagesart == "Mo-Do":
+            where_clause = "WHERE d.tagesart_abbr = 'Mo-Fr' AND d.wochentag_nr IN (0, 1, 2, 3)"
+        elif tagesart == "Fr":
+            where_clause = "WHERE d.tagesart_abbr = 'Mo-Fr' AND d.wochentag_nr = 4"
+        elif tagesart == "Sa":
+            where_clause = "WHERE d.tagesart_abbr = 'Sa'"
+        elif tagesart == "So/Ft":
+            where_clause = "WHERE d.tagesart_abbr = 'So/Ft'"
+
+        query = f"""
+        WITH valid_umlauf AS (
+            SELECT DISTINCT cs.umlauf_id
+            FROM cub_schedule cs
+            JOIN dim_date d ON cs.day_id = d.day_id
+            {where_clause}
+        ),
+        ausfahrten AS (
+            SELECT 
+                cs.umlauf_id,
+                cs.li_id,
+                o.stop_name as depot_aus_name,
+                o.stop_ort as depot_aus_ort,
+                cs.frt_start as event_time,
+                cs.frt_start as ausfahrt_zeit,
+                v.vehicle_type
+            FROM cub_schedule cs
+            JOIN valid_umlauf vu ON cs.umlauf_id = vu.umlauf_id
+            JOIN dim_fahrt f ON cs.frt_id = f.frt_id
+            JOIN dim_ort o ON cs.start_stop_id = o.stop_id
+            LEFT JOIN dim_vehicle v ON cs.vehicle_id = v.vehicle_id
+            WHERE f.fahrt_typ = 2
+        ),
+        einfahrten AS (
+            SELECT 
+                cs.umlauf_id,
+                o.stop_name as depot_ein_name,
+                o.stop_ort as depot_ein_ort,
+                cs.frt_ende as event_time,
+                cs.frt_ende as einfahrt_zeit,
+                v.vehicle_type
+            FROM cub_schedule cs
+            JOIN valid_umlauf vu ON cs.umlauf_id = vu.umlauf_id
+            JOIN dim_fahrt f ON cs.frt_id = f.frt_id
+            JOIN dim_ort o ON cs.end_stop_id = o.stop_id
+            LEFT JOIN dim_vehicle v ON cs.vehicle_id = v.vehicle_id
+            WHERE f.fahrt_typ = 3
+        )
+        SELECT DISTINCT
+            a.umlauf_id,
+            a.li_id,
+            l.li_no as line_no,
+            a.depot_aus_ort || ', ' || a.depot_aus_name as depot_ausfahrt,
+            e.depot_ein_ort || ', ' || e.depot_ein_name as depot_einfahrt,
+            a.ausfahrt_zeit,
+            e.einfahrt_zeit,
+            a.vehicle_type,
+            u.umlauf_kuerzel
+        FROM ausfahrten a
+        LEFT JOIN einfahrten e ON a.umlauf_id = e.umlauf_id
+        LEFT JOIN dim_line l ON a.li_id = l.li_id
+        LEFT JOIN dim_umlauf u ON a.umlauf_id = u.umlauf_id
+        ORDER BY l.li_no, a.ausfahrt_zeit
+        """
+        
+        peak_query = f"""
+        WITH valid_umlauf AS (
+            SELECT DISTINCT cs.umlauf_id
+            FROM cub_schedule cs
+            JOIN dim_date d ON cs.day_id = d.day_id
+            {where_clause}
+        ),
+        ausfahrten_distinct AS (
+            SELECT DISTINCT v.vehicle_type, cs.umlauf_id, cs.frt_start as event_time
+            FROM cub_schedule cs
+            JOIN valid_umlauf vu ON cs.umlauf_id = vu.umlauf_id
+            JOIN dim_fahrt f ON cs.frt_id = f.frt_id
+            LEFT JOIN dim_vehicle v ON cs.vehicle_id = v.vehicle_id
+            WHERE f.fahrt_typ = 2
+        ),
+        einfahrten_distinct AS (
+            SELECT DISTINCT v.vehicle_type, cs.umlauf_id, cs.frt_ende as event_time
+            FROM cub_schedule cs
+            JOIN valid_umlauf vu ON cs.umlauf_id = vu.umlauf_id
+            JOIN dim_fahrt f ON cs.frt_id = f.frt_id
+            LEFT JOIN dim_vehicle v ON cs.vehicle_id = v.vehicle_id
+            WHERE f.fahrt_typ = 3
+        ),
+        events AS (
+            SELECT vehicle_type, event_time, 1 as change FROM ausfahrten_distinct
+            UNION ALL
+            SELECT vehicle_type, event_time, -1 as change FROM einfahrten_distinct
+        ),
+        running_sum AS (
+            SELECT vehicle_type, event_time,
+                   SUM(change) OVER (PARTITION BY vehicle_type ORDER BY event_time ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as active_vehicles
+            FROM events
+        )
+        SELECT vehicle_type, MAX(active_vehicles) as max_vehicles_needed
+        FROM running_sum
+        WHERE vehicle_type IS NOT NULL
+        GROUP BY vehicle_type
+        ORDER BY max_vehicles_needed DESC
+        """
+        
+        depot_query = f"""
+        WITH valid_umlauf AS (
+            SELECT DISTINCT cs.umlauf_id
+            FROM cub_schedule cs
+            JOIN dim_date d ON cs.day_id = d.day_id
+            {where_clause}
+        ),
+        ausfahrten AS (
+            SELECT DISTINCT
+                cs.umlauf_id,
+                v.vehicle_type,
+                CASE 
+                    WHEN o.stop_ort LIKE '%Luzern%' OR o.stop_name LIKE '%Weinbergli%' THEN 'Weinbergli'
+                    WHEN o.stop_ort LIKE '%Root%' THEN 'Root'
+                    WHEN o.stop_ort LIKE '%Rothenburg%' OR o.stop_name LIKE '%Rothenburg%' THEN 'Rothenburg'
+                    ELSE o.stop_ort || ', ' || o.stop_name
+                END as depot_name
+            FROM cub_schedule cs
+            JOIN valid_umlauf vu ON cs.umlauf_id = vu.umlauf_id
+            JOIN dim_fahrt f ON cs.frt_id = f.frt_id
+            JOIN dim_ort o ON cs.start_stop_id = o.stop_id
+            LEFT JOIN dim_vehicle v ON cs.vehicle_id = v.vehicle_id
+            WHERE f.fahrt_typ = 2
+        ),
+        einfahrten AS (
+            SELECT DISTINCT
+                cs.umlauf_id,
+                v.vehicle_type,
+                CASE 
+                    WHEN o.stop_ort LIKE '%Luzern%' OR o.stop_name LIKE '%Weinbergli%' THEN 'Weinbergli'
+                    WHEN o.stop_ort LIKE '%Root%' THEN 'Root'
+                    WHEN o.stop_ort LIKE '%Rothenburg%' OR o.stop_name LIKE '%Rothenburg%' THEN 'Rothenburg'
+                    ELSE o.stop_ort || ', ' || o.stop_name
+                END as depot_name
+            FROM cub_schedule cs
+            JOIN valid_umlauf vu ON cs.umlauf_id = vu.umlauf_id
+            JOIN dim_fahrt f ON cs.frt_id = f.frt_id
+            JOIN dim_ort o ON cs.end_stop_id = o.stop_id
+            LEFT JOIN dim_vehicle v ON cs.vehicle_id = v.vehicle_id
+            WHERE f.fahrt_typ = 3
+        )
+        SELECT 
+            COALESCE(a.depot_name, e.depot_name) as depot,
+            COALESCE(a.vehicle_type, e.vehicle_type) as vehicle_type,
+            COUNT(DISTINCT a.umlauf_id) as ausfahrten_count,
+            COUNT(DISTINCT e.umlauf_id) as einfahrten_count
+        FROM ausfahrten a
+        FULL OUTER JOIN einfahrten e ON a.depot_name = e.depot_name AND a.umlauf_id = e.umlauf_id AND COALESCE(a.vehicle_type, '') = COALESCE(e.vehicle_type, '')
+        GROUP BY 1, 2
+        ORDER BY 1, 3 DESC NULLS LAST
+        """
+
+        peak_line_query = f"""
+        WITH valid_umlauf AS (
+            SELECT DISTINCT cs.umlauf_id
+            FROM cub_schedule cs
+            JOIN dim_date d ON cs.day_id = d.day_id
+            {where_clause}
+        ),
+        trips_distinct AS (
+            SELECT DISTINCT
+                l.li_no as line_no,
+                v.vehicle_type,
+                cs.umlauf_id,
+                cs.frt_start as event_start,
+                cs.frt_ende as event_end
+            FROM cub_schedule cs
+            JOIN valid_umlauf vu ON cs.umlauf_id = vu.umlauf_id
+            JOIN dim_fahrt f ON cs.frt_id = f.frt_id
+            LEFT JOIN dim_line l ON cs.li_id = l.li_id
+            LEFT JOIN dim_vehicle v ON cs.vehicle_id = v.vehicle_id
+            WHERE f.fahrt_typ = 1
+        ),
+        events AS (
+            SELECT line_no, vehicle_type, event_start as event_time, 1 as change FROM trips_distinct
+            UNION ALL
+            SELECT line_no, vehicle_type, event_end as event_time, -1 as change FROM trips_distinct
+        ),
+        running_sum AS (
+            SELECT line_no, vehicle_type, event_time,
+                   SUM(change) OVER (PARTITION BY line_no, vehicle_type ORDER BY event_time ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as active_vehicles
+            FROM events
+        )
+        SELECT line_no, vehicle_type, MAX(active_vehicles) as max_vehicles_needed
+        FROM running_sum
+        WHERE line_no IS NOT NULL
+        GROUP BY line_no, vehicle_type
+        HAVING MAX(active_vehicles) > 0
+        ORDER BY
+           -- custom sort to sort lines numerically where possible
+           CASE WHEN string_split(line_no, ' ')[1]~'^[0-9]+$' THEN CAST(string_split(line_no, ' ')[1] AS INT) ELSE 9999 END, line_no
+        """
+        
+        result_details = con.execute(query).fetchall()
+        result_peak = con.execute(peak_query).fetchall()
+        result_depot = con.execute(depot_query).fetchall()
+        result_peak_line = con.execute(peak_line_query).fetchall()
+        
+        details = []
+        for row in result_details:
+            details.append({
+                "umlauf_id": row[0],
+                "li_id": row[1],
+                "line_no": row[2] if row[2] else 'Unbekannt',
+                "depot_ausfahrt": row[3],
+                "depot_einfahrt": row[4],
+                "ausfahrt_zeit": row[5],
+                "einfahrt_zeit": row[6],
+                "vehicle_type": row[7] if row[7] else 'Unbekannt',
+                "umlauf_kuerzel": row[8] if row[8] else f"Umlauf {row[0]}"
+            })
+            
+        peak_vehicles = []
+        for row in result_peak:
+            peak_vehicles.append({
+                "vehicle_type": row[0],
+                "max_vehicles_needed": int(row[1]) if row[1] is not None else 0
+            })
+            
+        vehicles_per_depot = []
+        for row in result_depot:
+            vehicles_per_depot.append({
+                "depot": row[0],
+                "vehicle_type": row[1] if row[1] else "Unbekannt",
+                "ausfahrten_count": int(row[2]) if row[2] is not None else 0,
+                "einfahrten_count": int(row[3]) if row[3] is not None else 0
+            })
+            
+        peak_per_line = []
+        for row in result_peak_line:
+            peak_per_line.append({
+                "line_no": row[0],
+                "vehicle_type": row[1] if row[1] else "Unbekannt",
+                "max_vehicles_needed": int(row[2]) if row[2] is not None else 0
+            })
+            
+        return {
+            "details": details,
+            "peak_vehicles": peak_vehicles,
+            "vehicles_per_depot": vehicles_per_depot,
+            "peak_per_line": peak_per_line
+        }
+    except Exception as e:
+        print(f"Garaging Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 

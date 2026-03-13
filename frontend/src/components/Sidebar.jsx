@@ -14,6 +14,7 @@ const navItems = [
     { to: '/korridor', icon: 'timeline', label: 'Korridor-Analyse' },
     { to: '/umlaeufe', icon: 'loop', label: 'Umläufe' },
     { to: '/umlaeufe/charts', icon: 'insert_chart', label: 'Umlauf-Charts' },
+    { to: '/garagen', icon: 'local_shipping', label: 'Garagen & Depots' },
 ];
 
 export default function Sidebar() {
