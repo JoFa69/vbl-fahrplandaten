@@ -29,7 +29,7 @@ app.include_router(umlaeufe.router)
 # Serve Frontend (Monolithic Mode)
 # If the frontend/dist directory exists, we serve it as static files.
 # This allows the app to be deployed as a single service on Render.
-frontend_dist = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend", "dist")
+frontend_dist = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "frontend", "dist")
 
 if os.path.exists(frontend_dist):
     # Mount assets (CSS, JS, Images)
