@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+duckdb
+pandas
+python-dotenv
+pydantic
+google-genai
+aiofiles
+pydantic-settings
+python-multipart
