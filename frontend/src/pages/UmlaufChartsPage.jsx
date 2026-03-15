@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Card, Title, Grid, Text, Flex, Metric } from "@tremor/react";
+import { fetchUmlaeufeGantt, fetchUmlaeufeActiveVehicles, fetchUmlaeufeChartsStats } from '../api';
 import GanttChartComponent from '../components/charts/GanttChartComponent';
 import UmlaufScatterPlot from '../components/charts/UmlaufScatterPlot';
 import UmlaufAreaChart from '../components/charts/UmlaufAreaChart';
 import UmlaufHistogram from '../components/charts/UmlaufHistogram';
 import UmlaufDonut from '../components/charts/UmlaufDonut';
+import Spinner from '../components/ui/Spinner';
 
 const TAGESART_TABS = ['Alle', 'Mo-Fr', 'Sa', 'So/Ft'];
 
@@ -20,21 +21,16 @@ const UmlaufChartsPage = () => {
         const fetchAll = async () => {
             setLoading(true);
             try {
-                const [resGantt, resActive, resStats] = await Promise.all([
-                    fetch(`http://localhost:8000/api/umlaeufe/gantt?limit=200&day_type=${tagesart}`),
-                    fetch(`http://localhost:8000/api/umlaeufe/active_vehicles?day_type=${tagesart}`),
-                    fetch(`http://localhost:8000/api/umlaeufe/charts_stats?day_type=${tagesart}`)
+                const [gantt, active, stats] = await Promise.all([
+                    fetchUmlaeufeGantt(tagesart),
+                    fetchUmlaeufeActiveVehicles(tagesart),
+                    fetchUmlaeufeChartsStats(tagesart),
                 ]);
-
-                if (!resGantt.ok || !resActive.ok || !resStats.ok) {
-                    throw new Error("Fehler beim Laden der API-Daten.");
-                }
-
-                setGanttData(await resGantt.json());
-                setActiveVehicles(await resActive.json());
-                setStatsData(await resStats.json());
+                setGanttData(gantt);
+                setActiveVehicles(active);
+                setStatsData(stats);
             } catch (err) {
-                console.error("API error", err);
+                console.error('API error', err);
                 setError(err.message);
             } finally {
                 setLoading(false);
@@ -43,15 +39,11 @@ const UmlaufChartsPage = () => {
         fetchAll();
     }, [tagesart]);
 
-    // 1. Histogram Data (Dauer)
     const histogramData = useMemo(() => {
         if (!statsData.length) return [];
-        // Bin by hour
         const bins = {};
         statsData.forEach(d => {
-            // Ignore corrupted zero duration
             if (d.dauer_stunden <= 0) return;
-            // Round to nearest int or floor
             const hourBin = Math.floor(d.dauer_stunden);
             const label = `${hourBin}-${hourBin + 1}h`;
             if (!bins[label]) bins[label] = { label, anzahl: 0, sortKey: hourBin };
@@ -60,60 +52,43 @@ const UmlaufChartsPage = () => {
         return Object.values(bins).sort((a, b) => a.sortKey - b.sortKey);
     }, [statsData]);
 
-    // 2. Efficiency Donut Data (Productive vs Unproductive)
     const efficiencyData = useMemo(() => {
         if (!ganttData.length || !statsData.length) return [];
-
-        // Productive time = sum of all trips duration in hours
         let productiveSec = 0;
-        ganttData.forEach(u => {
-            u.fahrten.forEach(f => {
-                productiveSec += (f.ende_zeit_sekunden - f.start_zeit_sekunden);
-            });
-        });
+        ganttData.forEach(u => { u.fahrten.forEach(f => { productiveSec += (f.ende_zeit_sekunden - f.start_zeit_sekunden); }); });
         const productiveH = productiveSec / 3600;
-
-        // Total time = sum of all umlauf duration
         const totalH = statsData.reduce((sum, d) => sum + d.dauer_stunden, 0);
-        const unproductiveH = Math.max(0, totalH - productiveH);
-
         return [
-            { name: "Produktive Fahrzeit", value: Number(productiveH.toFixed(1)) },
-            { name: "Standzeit / Wendezeit", value: Number(unproductiveH.toFixed(1)) }
+            { name: 'Produktive Fahrzeit', value: Number(productiveH.toFixed(1)) },
+            { name: 'Standzeit / Wendezeit', value: Number(Math.max(0, totalH - productiveH).toFixed(1)) },
         ];
     }, [ganttData, statsData]);
 
-    // Summary Metric for Active Vehicles peak
     const peakVehicles = useMemo(() => {
         if (!activeVehicles.length) return { count: 0, time: '-' };
         const peak = activeVehicles.reduce((max, obj) => obj.active_count > max.active_count ? obj : max, activeVehicles[0]);
         return { count: peak.active_count, time: peak.time_label };
     }, [activeVehicles]);
 
-    if (loading) return <div className="p-4 text-gray-400">Lade Dashboard...</div>;
-    if (error) return <div className="p-4 text-red-500 bg-red-500/10 rounded-lg">Fehler: {error}</div>;
+    if (loading) return <Spinner label="Lade Dashboard..." />;
+    if (error) return <div className="p-4 text-red-400 bg-red-500/10 rounded-lg border border-red-500/20">Fehler: {error}</div>;
 
     return (
-        <div className="space-y-6">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-gray-900 border border-gray-800 p-4 rounded-xl shadow-lg gap-4">
+        <div className="space-y-6 p-6">
+            {/* Header */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-slate-900 border border-border-dark p-4 rounded-xl gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-white mb-1">
-                        Umlauf-Analyse & Effizienz
-                    </h1>
-                    <p className="text-gray-400">
-                        Interaktives Dashboard zur Optimierung der Fahrzeugumläufe.
-                    </p>
+                    <h1 className="text-2xl font-bold tracking-tight text-white mb-1">Umlauf-Analyse & Effizienz</h1>
+                    <p className="text-text-muted text-sm">Interaktives Dashboard zur Optimierung der Fahrzeugumläufe.</p>
                 </div>
-
-                {/* Tagesart Filter Tabs */}
-                <div className="flex p-1 bg-[#101622] rounded-lg border border-gray-800">
+                <div className="flex p-1 bg-slate-800 rounded-lg border border-border-dark gap-1">
                     {TAGESART_TABS.map(tab => (
                         <button
                             key={tab}
                             onClick={() => setTagesart(tab)}
                             className={`px-4 py-1.5 text-sm font-semibold rounded-md transition-all ${tagesart === tab
-                                ? 'bg-blue-600 text-white shadow-md'
-                                : 'text-gray-400 hover:text-white hover:bg-slate-800'
+                                ? 'bg-primary text-white shadow-md'
+                                : 'text-text-muted hover:text-white hover:bg-slate-700'
                                 }`}
                         >
                             {tab}
@@ -122,74 +97,73 @@ const UmlaufChartsPage = () => {
                 </div>
             </div>
 
-            {/* Row 1: Active Vehicles */}
-            <Card className="bg-gray-900 border-gray-800">
-                <Flex alignItems="start">
+            {/* Active Vehicles Card */}
+            <div className="bg-slate-900 border border-border-dark rounded-xl p-6">
+                <div className="flex items-start justify-between mb-4">
                     <div>
-                        <Title className="text-white">Fahrzeug-Auslastung im Tagesverlauf</Title>
-                        <Text className="text-gray-400">Anzahl gleichzeitig aktiver Fahrzeuge von 04:00 bis 02:00 Uhr (Folgetag)</Text>
+                        <h3 className="text-white font-bold text-base">Fahrzeug-Auslastung im Tagesverlauf</h3>
+                        <p className="text-text-muted text-sm mt-0.5">Anzahl gleichzeitig aktiver Fahrzeuge von 04:00 bis 02:00 Uhr (Folgetag)</p>
                     </div>
-                    <div className="text-right">
-                        <Text className="text-gray-400">Spitzenlast (Peak Service)</Text>
-                        <Metric className="text-emerald-500">{peakVehicles.count} Fzg.</Metric>
-                        <Text className="text-gray-500 text-sm">um {peakVehicles.time} Uhr</Text>
+                    <div className="text-right shrink-0 ml-4">
+                        <p className="text-text-muted text-xs uppercase tracking-wider font-semibold">Spitzenlast</p>
+                        <span className="text-emerald-400 text-3xl font-black">{peakVehicles.count} Fzg.</span>
+                        <p className="text-text-muted text-xs">um {peakVehicles.time} Uhr</p>
                     </div>
-                </Flex>
-                <div className="mt-4 h-72">
+                </div>
+                <div className="h-72">
                     <UmlaufAreaChart data={activeVehicles} />
                 </div>
-            </Card>
+            </div>
 
-            {/* Row 2: Histogram & Donut & Scatter */}
-            <Grid numItemsSm={1} numItemsLg={3} className="gap-6">
-
-                {/* Histogram */}
-                <Card className="bg-gray-900 border-gray-800 col-span-1 lg:col-span-1">
-                    <Title className="text-white">Verteilung Umlaufdauern</Title>
-                    <Text className="text-gray-400 mb-4">Anzahl der Umläufe gebündelt nach Gesamtstunden</Text>
-                    <div className="h-60 mt-4">
+            {/* Histogram, Donut, Scatter */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="bg-slate-900 border border-border-dark rounded-xl p-6">
+                    <h3 className="text-white font-bold text-base">Verteilung Umlaufdauern</h3>
+                    <p className="text-text-muted text-sm mt-0.5 mb-4">Anzahl der Umläufe gebündelt nach Gesamtstunden</p>
+                    <div className="h-60">
                         <UmlaufHistogram data={histogramData} />
                     </div>
-                </Card>
+                </div>
 
-                {/* Efficiency Donut */}
-                <Card className="bg-gray-900 border-gray-800 flex flex-col justify-between items-center col-span-1 lg:col-span-1">
-                    <div className="w-full">
-                        <Title className="text-white">Effizienz: Fahrbetrieb vs. Standzeit</Title>
-                        <Text className="text-gray-400 mb-4">Kumulierte Stunden aller Umläufe</Text>
+                <div className="bg-slate-900 border border-border-dark rounded-xl p-6 flex flex-col">
+                    <div>
+                        <h3 className="text-white font-bold text-base">Effizienz: Fahrbetrieb vs. Standzeit</h3>
+                        <p className="text-text-muted text-sm mt-0.5 mb-4">Kumulierte Stunden aller Umläufe</p>
                     </div>
-                    <div className="flex-1 flex items-center justify-center w-full min-h-[200px]">
+                    <div className="flex-1 flex items-center justify-center min-h-[200px]">
                         <UmlaufDonut data={efficiencyData} />
                     </div>
-                    <div className="flex justify-center flex-wrap gap-4 w-full mt-4 text-sm">
-                        <div className="flex items-center gap-2">
-                            <span className="w-3 h-3 rounded-full bg-emerald-500"></span>
-                            <span className="text-gray-300">Fahrt ({efficiencyData[0].value} h)</span>
+                    {efficiencyData.length >= 2 && (
+                        <div className="flex justify-center flex-wrap gap-4 mt-4 text-sm">
+                            <div className="flex items-center gap-2">
+                                <span className="w-3 h-3 rounded-full bg-emerald-500 shrink-0" />
+                                <span className="text-slate-300">Fahrt ({efficiencyData[0].value} h)</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className="w-3 h-3 rounded-full bg-rose-500 shrink-0" />
+                                <span className="text-slate-300">Stand/Wende ({efficiencyData[1].value} h)</span>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <span className="w-3 h-3 rounded-full bg-rose-500"></span>
-                            <span className="text-gray-300">Stand/Wende ({efficiencyData[1].value} h)</span>
-                        </div>
-                    </div>
-                </Card>
+                    )}
+                </div>
 
-                {/* Scatter Plot */}
-                <Card className="bg-gray-900 border-gray-800 col-span-1 lg:col-span-1">
-                    <Title className="text-white">Fahrten vs. Distanz</Title>
-                    <Text className="text-gray-400 mb-4">Outlier-Check: Tagesdistanz vs. Einzelfahrten</Text>
+                <div className="bg-slate-900 border border-border-dark rounded-xl p-6">
+                    <h3 className="text-white font-bold text-base">Fahrten vs. Distanz</h3>
+                    <p className="text-text-muted text-sm mt-0.5 mb-4">Outlier-Check: Tagesdistanz vs. Einzelfahrten</p>
                     <div className="h-[260px] w-full">
                         <UmlaufScatterPlot data={statsData} />
                     </div>
-                </Card>
-            </Grid>
+                </div>
+            </div>
 
-            {/* Row 3: Gantt Chart */}
-            <Card className="bg-gray-900 border-gray-800">
-                <Title className="text-white">Gantt-Diagramm (Fahrplan-Ablauf)</Title>
-                <Text className="text-gray-400 mb-4">Zeitbalken jedes Umlaufs. Fahrten werden farblich nach Linien getrennt. Graue Lücken markieren Wende- oder Pausenzeiten.</Text>
+            {/* Gantt Chart */}
+            <div className="bg-slate-900 border border-border-dark rounded-xl p-6">
+                <h3 className="text-white font-bold text-base">Gantt-Diagramm (Fahrplan-Ablauf)</h3>
+                <p className="text-text-muted text-sm mt-0.5 mb-4">
+                    Zeitbalken jedes Umlaufs. Fahrten werden farblich nach Linien getrennt. Graue Lücken markieren Wende- oder Pausenzeiten.
+                </p>
                 <GanttChartComponent data={ganttData} />
-            </Card>
-
+            </div>
         </div>
     );
 };

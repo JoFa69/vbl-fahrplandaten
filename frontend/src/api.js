@@ -249,8 +249,48 @@ export async function fetchCorridorBildfahrplan(stop_id_start, stop_id_end, tage
 export async function fetchGaragingData(tagesart = "Mo-Do") {
     const params = new URLSearchParams();
     if (tagesart) params.append("tagesart", tagesart);
-    
+
     const res = await apiFetch(`${API_BASE}/analytics/garaging?${params.toString()}`);
     if (!res.ok) throw new Error("Failed to fetch garaging data");
     return res.json();
+}
+
+// Umläufe APIs
+async function apiFetchJson(url) {
+    const res = await apiFetch(url);
+    if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.detail || `HTTP ${res.status}: ${url}`);
+    }
+    return res.json();
+}
+
+export async function fetchUmlaeufeSummary(tagesart = "Alle") {
+    const params = new URLSearchParams();
+    if (tagesart) params.append("tagesart", tagesart);
+    return apiFetchJson(`${API_BASE}/umlaeufe/summary?${params.toString()}`);
+}
+
+export async function fetchUmlaeufeList(tagesart = "Alle", page = 1, size = 1000) {
+    const params = new URLSearchParams({ page, size });
+    if (tagesart) params.append("tagesart", tagesart);
+    return apiFetchJson(`${API_BASE}/umlaeufe?${params.toString()}`);
+}
+
+export async function fetchUmlaeufeGantt(tagesart = "Alle", limit = 200) {
+    const params = new URLSearchParams({ limit });
+    if (tagesart) params.append("day_type", tagesart);
+    return apiFetchJson(`${API_BASE}/umlaeufe/gantt?${params.toString()}`);
+}
+
+export async function fetchUmlaeufeActiveVehicles(tagesart = "Alle") {
+    const params = new URLSearchParams();
+    if (tagesart) params.append("day_type", tagesart);
+    return apiFetchJson(`${API_BASE}/umlaeufe/active_vehicles?${params.toString()}`);
+}
+
+export async function fetchUmlaeufeChartsStats(tagesart = "Alle") {
+    const params = new URLSearchParams();
+    if (tagesart) params.append("day_type", tagesart);
+    return apiFetchJson(`${API_BASE}/umlaeufe/charts_stats?${params.toString()}`);
 }

@@ -81,7 +81,7 @@ def get_trips_per_hour(x_scenario: str = Header("strategic")):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/volume")
-async def get_volume_metrics(
+def get_volume_metrics(
     line_no: Optional[str] = Query(None, description="Filter by Line Number (li_no)"),
     group_by: str = Query("line", enum=["line", "hour", "direction"], description="Grouping dimension"),
     x_scenario: str = Header("strategic")
@@ -151,7 +151,7 @@ async def get_volume_metrics(
 
 
 @router.get("/geometry")
-async def get_geometry_metrics(
+def get_geometry_metrics(
     type: str = Query("lines", enum=["lines", "variants", "stops"], description="Type of geometry data"),
     line_id: Optional[int] = Query(None, description="Line ID for variants (deprecated, use line_no)"),
     line_no: Optional[str] = Query(None, description="Line number string for filtering variants"),
@@ -334,7 +334,7 @@ async def get_geometry_metrics(
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/time")
-async def get_time_metrics(
+def get_time_metrics(
     line_id: Optional[int] = Query(None, description="Filter by Line ID"),
     variant_id: Optional[int] = Query(None, description="Filter by Variant/Route ID"),
     metric: str = Query("duration", enum=["duration", "speed"], description="Metric type"),
@@ -472,7 +472,7 @@ def get_infrastructure_metrics(
 
 
 @router.get("/geometry/route/{line_no}")
-async def get_route_geometry(line_no: str, route_id: Optional[int] = Query(None), x_scenario: str = Header("strategic")):
+def get_route_geometry(line_no: str, route_id: Optional[int] = Query(None), x_scenario: str = Header("strategic")):
     """
     Get route geometry for a specific line.
     If route_id is provided, returns geometry for that specific variant as a list with one item.
@@ -551,7 +551,7 @@ async def get_route_geometry(line_no: str, route_id: Optional[int] = Query(None)
         print(f"Route Geometry Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 @router.get("/geometry/routes/primary")
-async def get_all_primary_routes(
+def get_all_primary_routes(
     fahrtart: Optional[int] = Query(None, description="Trip type filter"),
     x_scenario: str = Header("strategic")
 ):

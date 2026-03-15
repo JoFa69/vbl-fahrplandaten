@@ -1,8 +1,8 @@
 import duckdb
 import os
 
-DB_PATH = '20261231_fahrplandaten_2027.db'
-VDV_DB_PATH = 'vdv_schedule.duckdb'
+DB_PATH = os.path.join(os.path.dirname(__file__), '..', '..', '20261231_fahrplandaten_2027.db')
+VDV_DB_PATH = os.path.join(os.path.dirname(__file__), '..', 'data', 'vdv_schedule.duckdb')
 
 def main():
     if not os.path.exists(DB_PATH):
@@ -46,15 +46,42 @@ def main():
         print(f"Successfully ensured {v_count} vehicles are in dim_vehicle.")
 
         print("Mapping Umläufe to Vehicles in cub_schedule...")
+        # Redefine dim_umlauf with correct schema
+        print("Redefining dim_umlauf...")
+        con.execute("DROP TABLE IF EXISTS dim_umlauf;")
+        con.execute("""
+        CREATE TABLE dim_umlauf (
+            umlauf_id INTEGER PRIMARY KEY,
+            umlauf_no INTEGER,
+            vehicle_id INTEGER,
+            umlauf_kuerzel VARCHAR
+        );
+        """)
+
+        print("Populating dim_umlauf from rec_umlauf...")
+        query_umlauf = """
+        INSERT INTO dim_umlauf (umlauf_id, umlauf_no, vehicle_id, umlauf_kuerzel)
+        SELECT DISTINCT
+            CAST(UM_UID AS INTEGER) as umlauf_id,
+            CAST(UM_UID AS INTEGER) as umlauf_no,
+            CAST(MAX(FZG_TYP_NR) AS INTEGER) as vehicle_id,
+            CAST(UM_UID AS VARCHAR) as umlauf_kuerzel
+        FROM vdv.rec_umlauf
+        GROUP BY UM_UID;
+        """
+        con.execute(query_umlauf)
+        u_count = con.execute("SELECT COUNT(*) FROM dim_umlauf").fetchone()[0]
+        print(f"Successfully populated {u_count} records into dim_umlauf.")
+
         # Since rec_umlauf links UM_UID to FZG_TYP_NR, we map it back
         # There are multiple entries per UM_UID (one for each day/trip variation in raw data).
         # We assume the FZG_TYP_NR is consistent per UM_UID.
         query_update = """
         UPDATE cub_schedule
         SET vehicle_id = (
-            SELECT CAST(MAX(r.FZG_TYP_NR) AS INTEGER)
-            FROM vdv.rec_umlauf r
-            WHERE CAST(r.UM_UID AS INTEGER) = cub_schedule.umlauf_id
+            SELECT vehicle_id
+            FROM dim_umlauf
+            WHERE dim_umlauf.umlauf_id = cub_schedule.umlauf_id
         )
         WHERE vehicle_id IS NULL;
         """

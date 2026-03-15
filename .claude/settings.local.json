@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find \"/c/Users/Joche/OneDrive/Desktop/VBL Fahrplandaten/frontend/src/pages\" -name \"*.jsx\" -exec wc -l {} +)"
+    ]
+  }
+}

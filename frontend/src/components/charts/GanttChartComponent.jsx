@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import * as d3 from 'd3';
+import { formatTime } from '../../utils/formatters';
 
 const GanttChartComponent = ({ data = [] }) => {
     // data is an array of GanttUmlauf: { umlauf_id: 123, fahrten: [{start_zeit_sekunden, ende_zeit_sekunden, li_no}] }
@@ -8,13 +9,6 @@ const GanttChartComponent = ({ data = [] }) => {
     const MIN_TIME = 14400;
     const MAX_TIME = 93600;
     const TOTAL_TIME = MAX_TIME - MIN_TIME;
-
-    // Helper to format seconds to HH:MM
-    const formatTime = (seconds) => {
-        const h = Math.floor(seconds / 3600);
-        const m = Math.floor((seconds % 3600) / 60);
-        return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-    };
 
     // Generate color palette for lines
     const colorScale = useMemo(() => {

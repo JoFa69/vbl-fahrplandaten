@@ -2,10 +2,36 @@ from fastapi import APIRouter, HTTPException, Query, Header
 from pydantic import BaseModel
 from typing import List, Optional
 import math
+import pandas as pd
 
 from ..database import get_db
+from ..utils.query_builder import WhereClause
 
 router = APIRouter(prefix="/api/umlaeufe", tags=["umlaeufe"])
+
+# Haversine distance CTE: sums segment distances between consecutive stops per schedule_id
+_ROUTE_DIST_CTE = """
+    route_dist AS (
+        SELECT
+            r1.schedule_id,
+            SUM(
+                2 * 6371.0 * asin(sqrt(
+                    power(sin(radians((o2.lat - o1.lat) / 2.0)), 2) +
+                    cos(radians(o1.lat)) * cos(radians(o2.lat)) *
+                    power(sin(radians((o2.lon - o1.lon) / 2.0)), 2)
+                ))
+            ) AS distanz_km
+        FROM cub_route r1
+        JOIN cub_route r2
+          ON r1.schedule_id = r2.schedule_id
+         AND r2.li_lfd_nr   = r1.li_lfd_nr + 1
+        JOIN dim_ort o1 ON r1.stop_id = o1.stop_id
+        JOIN dim_ort o2 ON r2.stop_id = o2.stop_id
+        WHERE o1.lat IS NOT NULL AND o1.lon IS NOT NULL
+          AND o2.lat IS NOT NULL AND o2.lon IS NOT NULL
+        GROUP BY r1.schedule_id
+    )
+"""
 
 class UmlaufSummary(BaseModel):
     total_umlaeufe: int
@@ -34,36 +60,35 @@ def get_umlaeufe_summary(tagesart: Optional[str] = Query("Alle", description="Ta
     try:
         conn = get_db(x_scenario)
         
-        where_clause = "WHERE s.umlauf_id IS NOT NULL AND s.umlauf_id != 0"
-        if tagesart and tagesart != "Alle":
-            where_clause += f" AND d.tagesart_abbr = '{tagesart}'"
-            
+        wc = WhereClause("s.umlauf_id IS NOT NULL AND s.umlauf_id != 0").add_tagesart(tagesart)
+
         # Calculate totals. We need to sum per umlauf first, then aggregate.
         query = f"""
-        WITH umlauf_stats AS (
-            SELECT 
+        WITH {_ROUTE_DIST_CTE},
+        umlauf_stats AS (
+            SELECT
                 s.umlauf_id,
                 COUNT(DISTINCT s.schedule_id) as fahrten,
                 MIN(s.frt_start) as start_zeit,
                 MAX(s.frt_ende) as ende_zeit,
                 (MAX(s.frt_ende) - MIN(s.frt_start)) as dauer_sec,
-                SUM(r.laenge) as distanz_m
+                COALESCE(SUM(rd.distanz_km), 0) as distanz_km
             FROM cub_schedule s
-            LEFT JOIN cub_route r ON s.schedule_id = r.schedule_id
+            LEFT JOIN route_dist rd ON s.schedule_id = rd.schedule_id
             LEFT JOIN dim_date d ON s.day_id = d.day_id
-            {where_clause}
+            {wc}
             GROUP BY s.umlauf_id
         )
-        SELECT 
+        SELECT
             COUNT(umlauf_id) as total_umlaeufe,
             SUM(fahrten) as total_fahrten,
             AVG(dauer_sec) / 60.0 as avg_dauer_min,
-            SUM(distanz_m) / 1000.0 as total_distanz_km
+            SUM(distanz_km) as total_distanz_km
         FROM umlauf_stats
         """
-        
-        df = conn.execute(query).df()
-        
+
+        df = conn.execute(query, wc.params).df()
+
         if df.empty or df.isna().all().all():
             return {
                 "total_umlaeufe": 0,
@@ -74,10 +99,10 @@ def get_umlaeufe_summary(tagesart: Optional[str] = Query("Alle", description="Ta
             
         row = df.iloc[0]
         return {
-            "total_umlaeufe": int(row['total_umlaeufe']) if not math.isnan(row['total_umlaeufe']) else 0,
-            "total_fahrten": int(row['total_fahrten']) if not math.isnan(row['total_fahrten']) else 0,
-            "avg_dauer_minuten": float(row['avg_dauer_min']) if not math.isnan(row['avg_dauer_min']) else 0.0,
-            "total_distanz_km": float(row['total_distanz_km']) if not math.isnan(row['total_distanz_km']) else 0.0
+            "total_umlaeufe": int(row['total_umlaeufe']) if not pd.isna(row['total_umlaeufe']) else 0,
+            "total_fahrten": int(row['total_fahrten']) if not pd.isna(row['total_fahrten']) else 0,
+            "avg_dauer_minuten": float(row['avg_dauer_min']) if not pd.isna(row['avg_dauer_min']) else 0.0,
+            "total_distanz_km": float(row['total_distanz_km']) if not pd.isna(row['total_distanz_km']) else 0.0
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -110,52 +135,50 @@ def get_umlaeufe_list(
         
         offset = (page - 1) * size
         
-        where_clause = "WHERE s.umlauf_id IS NOT NULL AND s.umlauf_id != 0"
-        if tagesart and tagesart != "Alle":
-            where_clause += f" AND d.tagesart_abbr = '{tagesart}'"
-            
-        # Base query for aggregation
-        base_query = f"""
-        SELECT 
-            s.umlauf_id,
-            COUNT(DISTINCT s.schedule_id) as anzahl_fahrten,
-            MIN(s.frt_start) as start_zeit_sekunden,
-            MAX(s.frt_ende) as ende_zeit_sekunden,
-            (MAX(s.frt_ende) - MIN(s.frt_start)) / 3600.0 as dauer_stunden,
-            COALESCE(SUM(r.laenge), 0) / 1000.0 as distanz_km
+        wc = WhereClause("s.umlauf_id IS NOT NULL AND s.umlauf_id != 0").add_tagesart(tagesart)
+
+        # Count total distinct umlaeufe (no distance needed)
+        count_query = f"""
+        SELECT COUNT(DISTINCT s.umlauf_id) as total
         FROM cub_schedule s
-        LEFT JOIN (
-            SELECT schedule_id, SUM(laenge) as laenge
-            FROM cub_route
-            GROUP BY schedule_id
-        ) r ON s.schedule_id = r.schedule_id
         LEFT JOIN dim_date d ON s.day_id = d.day_id
-        {where_clause}
-        GROUP BY s.umlauf_id
+        {wc}
         """
-        
-        # Count total records
-        count_query = f"SELECT COUNT(*) as total FROM ({base_query}) q"
-        total_count = int(conn.execute(count_query).df().iloc[0]['total'])
-        
-        # Pagination query
+        total_count = int(conn.execute(count_query, wc.params).df().iloc[0]['total'])
+
+        # Paginated query with Haversine distance
         paginated_query = f"""
-        SELECT * FROM ({base_query}) q
+        WITH {_ROUTE_DIST_CTE},
+        umlauf_agg AS (
+            SELECT
+                s.umlauf_id,
+                COUNT(DISTINCT s.schedule_id) as anzahl_fahrten,
+                MIN(s.frt_start) as start_zeit_sekunden,
+                MAX(s.frt_ende) as ende_zeit_sekunden,
+                (MAX(s.frt_ende) - MIN(s.frt_start)) / 3600.0 as dauer_stunden,
+                COALESCE(SUM(rd.distanz_km), 0) as distanz_km
+            FROM cub_schedule s
+            LEFT JOIN route_dist rd ON s.schedule_id = rd.schedule_id
+            LEFT JOIN dim_date d ON s.day_id = d.day_id
+            {wc}
+            GROUP BY s.umlauf_id
+        )
+        SELECT * FROM umlauf_agg
         ORDER BY {sort_column} {sort_order}, umlauf_id ASC
         LIMIT {size} OFFSET {offset}
         """
-        
-        df = conn.execute(paginated_query).df()
+
+        df = conn.execute(paginated_query, wc.params).df()
         
         results = []
         for _, row in df.iterrows():
             results.append({
                 "umlauf_id": int(row['umlauf_id']),
                 "anzahl_fahrten": int(row['anzahl_fahrten']),
-                "start_zeit_sekunden": int(row['start_zeit_sekunden']) if not math.isnan(row['start_zeit_sekunden']) else 0,
-                "ende_zeit_sekunden": int(row['ende_zeit_sekunden']) if not math.isnan(row['ende_zeit_sekunden']) else 0,
-                "dauer_stunden": float(row['dauer_stunden']) if not math.isnan(row['dauer_stunden']) else 0.0,
-                "distanz_km": float(row['distanz_km']) if not math.isnan(row['distanz_km']) else 0.0
+                "start_zeit_sekunden": int(row['start_zeit_sekunden']) if not pd.isna(row['start_zeit_sekunden']) else 0,
+                "ende_zeit_sekunden": int(row['ende_zeit_sekunden']) if not pd.isna(row['ende_zeit_sekunden']) else 0,
+                "dauer_stunden": float(row['dauer_stunden']) if not pd.isna(row['dauer_stunden']) else 0.0,
+                "distanz_km": float(row['distanz_km']) if not pd.isna(row['distanz_km']) else 0.0
             })
             
         pages = math.ceil(total_count / size) if size > 0 else 0
@@ -198,28 +221,26 @@ def get_umlaeufe_gantt(day_type: Optional[str] = Query("Alle", description="Tage
     try:
         conn = get_db(x_scenario)
         
-        where_clause = "WHERE s.umlauf_id IS NOT NULL AND s.umlauf_id != 0"
-        if day_type and day_type != "Alle":
-            where_clause += f" AND d.tagesart_abbr = '{day_type}'"
-            
+        wc = WhereClause("s.umlauf_id IS NOT NULL AND s.umlauf_id != 0").add_tagesart(day_type)
+
         # Find the top N umläufe by number of trips to keep gantt performant
         top_query = f"""
-            SELECT s.umlauf_id 
+            SELECT s.umlauf_id
             FROM cub_schedule s
             LEFT JOIN dim_date d ON s.day_id = d.day_id
-            {where_clause}
-            GROUP BY s.umlauf_id 
-            ORDER BY COUNT(*) DESC 
+            {wc}
+            GROUP BY s.umlauf_id
+            ORDER BY COUNT(*) DESC
             LIMIT {limit}
         """
-        top_df = conn.execute(top_query).df()
+        top_df = conn.execute(top_query, wc.params).df()
         if top_df.empty:
             return []
-        
+
         umlauf_ids = ",".join(str(uid) for uid in top_df['umlauf_id'].tolist())
-        
+
         query = f"""
-            SELECT 
+            SELECT
                 s.umlauf_id,
                 s.schedule_id,
                 l.li_no,
@@ -228,11 +249,11 @@ def get_umlaeufe_gantt(day_type: Optional[str] = Query("Alle", description="Tage
             FROM cub_schedule s
             LEFT JOIN dim_line l ON s.li_id = l.li_id
             LEFT JOIN dim_date d ON s.day_id = d.day_id
-            {where_clause} AND s.umlauf_id IN ({umlauf_ids})
+            {wc} AND s.umlauf_id IN ({umlauf_ids})
             ORDER BY s.umlauf_id, s.frt_start
         """
-        df = conn.execute(query).df()
-        
+        df = conn.execute(query, wc.params).df()
+
         result_map = {}
         for _, row in df.iterrows():
             uid = int(row['umlauf_id'])
@@ -242,8 +263,8 @@ def get_umlaeufe_gantt(day_type: Optional[str] = Query("Alle", description="Tage
             result_map[uid].append({
                 "schedule_id": int(row['schedule_id']),
                 "li_no": str(row['li_no']) if row['li_no'] else "N/A",
-                "start_zeit_sekunden": int(row['start_zeit_sekunden']) if not math.isnan(row['start_zeit_sekunden']) else 0,
-                "ende_zeit_sekunden": int(row['ende_zeit_sekunden']) if not math.isnan(row['ende_zeit_sekunden']) else 0
+                "start_zeit_sekunden": int(row['start_zeit_sekunden']) if not pd.isna(row['start_zeit_sekunden']) else 0,
+                "ende_zeit_sekunden": int(row['ende_zeit_sekunden']) if not pd.isna(row['ende_zeit_sekunden']) else 0
             })
             
         gantt_list = []
@@ -262,23 +283,21 @@ def get_active_vehicles(day_type: Optional[str] = Query("Alle", description="Tag
     try:
         conn = get_db(x_scenario)
         
-        where_clause = "WHERE s.umlauf_id IS NOT NULL AND s.umlauf_id != 0"
-        if day_type and day_type != "Alle":
-            where_clause += f" AND d.tagesart_abbr = '{day_type}'"
-            
+        wc = WhereClause("s.umlauf_id IS NOT NULL AND s.umlauf_id != 0").add_tagesart(day_type)
+
         # Get min_start and max_ende per umlauf
         query = f"""
-            SELECT 
+            SELECT
                 s.umlauf_id,
                 MIN(s.frt_start) as min_start,
                 MAX(s.frt_ende) as max_ende
             FROM cub_schedule s
             LEFT JOIN dim_date d ON s.day_id = d.day_id
-            {where_clause}
+            {wc}
             GROUP BY s.umlauf_id
         """
-        df = conn.execute(query).df()
-        
+        df = conn.execute(query, wc.params).df()
+
         # 4:00 (14400) to 26:00 (93600) every 15 mins (900 seconds)
         start_sec = 14400
         end_sec = 93600
@@ -305,37 +324,32 @@ def get_charts_stats(day_type: Optional[str] = Query("Alle", description="Tagesa
     try:
         conn = get_db(x_scenario)
         
-        where_clause = "WHERE s.umlauf_id IS NOT NULL AND s.umlauf_id != 0"
-        if day_type and day_type != "Alle":
-            where_clause += f" AND d.tagesart_abbr = '{day_type}'"
-            
+        wc = WhereClause("s.umlauf_id IS NOT NULL AND s.umlauf_id != 0").add_tagesart(day_type)
+
         query = f"""
-        SELECT 
+        WITH {_ROUTE_DIST_CTE}
+        SELECT
             s.umlauf_id,
             COUNT(DISTINCT s.schedule_id) as anzahl_fahrten,
             (MAX(s.frt_ende) - MIN(s.frt_start)) / 3600.0 as dauer_stunden,
-            COALESCE(SUM(r.laenge), 0) / 1000.0 as distanz_km
+            COALESCE(SUM(rd.distanz_km), 0) as distanz_km
         FROM cub_schedule s
-        LEFT JOIN (
-            SELECT schedule_id, SUM(laenge) as laenge
-            FROM cub_route
-            GROUP BY schedule_id
-        ) r ON s.schedule_id = r.schedule_id
+        LEFT JOIN route_dist rd ON s.schedule_id = rd.schedule_id
         LEFT JOIN dim_date d ON s.day_id = d.day_id
-        {where_clause}
+        {wc}
         GROUP BY s.umlauf_id
         """
-        df = conn.execute(query).df()
-        
+        df = conn.execute(query, wc.params).df()
+
         results = []
         for _, row in df.iterrows():
             results.append({
                 "umlauf_id": int(row['umlauf_id']),
                 "anzahl_fahrten": int(row['anzahl_fahrten']),
-                "dauer_stunden": float(row['dauer_stunden']) if not math.isnan(row['dauer_stunden']) else 0.0,
-                "distanz_km": float(row['distanz_km']) if not math.isnan(row['distanz_km']) else 0.0
+                "dauer_stunden": float(row['dauer_stunden']) if not pd.isna(row['dauer_stunden']) else 0.0,
+                "distanz_km": float(row['distanz_km']) if not pd.isna(row['distanz_km']) else 0.0
             })
-            
+
         return results
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

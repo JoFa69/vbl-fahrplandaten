@@ -1,0 +1,27 @@
+import duckdb
+import os
+
+DB_PATH = os.path.join(os.path.dirname(__file__), '..', '20261231_fahrplandaten_2027.db')
+
+def check():
+    if not os.path.exists(DB_PATH):
+        print(f"{DB_PATH} not found")
+        return
+    
+    con = duckdb.connect(DB_PATH, read_only=True)
+    
+    print("\n--- cub_schedule ---")
+    try:
+        schema = con.execute(f"PRAGMA table_info('cub_schedule')").fetchall()
+        for s in schema:
+            print(s)
+        
+        count = con.execute(f"SELECT COUNT(*) FROM cub_schedule").fetchone()[0]
+        print(f"Row count: {count}")
+    except Exception as e:
+        print(f"Error checking cub_schedule: {e}")
+
+    con.close()
+
+if __name__ == "__main__":
+    check()

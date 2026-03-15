@@ -4,6 +4,7 @@ import os
 import duckdb
 from collections import defaultdict
 from ..database import get_db
+from ..utils.query_builder import WhereClause
 
 router = APIRouter()
 
@@ -22,19 +23,19 @@ def get_line_stops(line_no: str, x_scenario: str = Header("strategic")):
     con = get_db(x_scenario)
     try:
         # Also return the split names in /lines/{line_no}/stops
-        query = f"""
+        query = """
             SELECT DISTINCT s.stop_id, s.stop_text, s.stop_ort, s.stop_name
             FROM cub_schedule c
             JOIN dim_line l ON c.li_id = l.li_id
             JOIN dim_ort s ON c.start_stop_id = s.stop_id
-            WHERE l.li_no = '{line_no}'
+            WHERE l.li_no = ?
             ORDER BY s.stop_text
         """
-        result = con.execute(query).fetchall()
-        
+        result = con.execute(query, [line_no]).fetchall()
+
         if not result:
             # Check if line exists at all
-            line_check = con.execute(f"SELECT COUNT(*) FROM dim_line WHERE li_no = '{line_no}'").fetchone()[0]
+            line_check = con.execute("SELECT COUNT(*) FROM dim_line WHERE li_no = ?", [line_no]).fetchone()[0]
             if line_check == 0:
                 raise HTTPException(status_code=404, detail="Line not found")
             return [] # Line exists but no stops found (unlikely for valid schedule)
@@ -52,19 +53,16 @@ def get_stops(tagesart: str = None, ort: str = None, x_scenario: str = Header("s
     con = get_db(x_scenario)
     try:
         # Determine the filtering and averaging logic
-        where_clause = "WHERE 1=1"
-        if tagesart and tagesart != "Alle":
-            where_clause += f" AND d.tagesart_abbr = '{tagesart}'"
-            
-        ort_filter = ""
-        if ort:
-            ort_filter = f" AND stop_ort = '{ort}'"
+        wc = WhereClause().add_tagesart(tagesart)
+        # ort_filter is an AND-suffix on an existing WHERE inside a CTE — kept as plain param
+        ort_filter = " AND stop_ort = ?" if ort else ""
+        ort_params = [ort] if ort else []
 
         # Try strategic schema first (cub_schedule has route_id)
         try:
             query = f"""
                 WITH stop_trips AS (
-                    SELECT 
+                    SELECT
                         r.ideal_stop_nr as stop_abbr,
                         COUNT(DISTINCT s.frt_id) / CAST(NULLIF(COUNT(DISTINCT s.day_id), 0) AS FLOAT) as avg_daily_trips,
                         COUNT(DISTINCT l.li_no) as num_lines
@@ -72,22 +70,22 @@ def get_stops(tagesart: str = None, ort: str = None, x_scenario: str = Header("s
                     JOIN dim_route r ON s.route_id = r.route_id
                     JOIN dim_line l ON s.li_id = l.li_id
                     JOIN dim_date d ON s.day_id = d.day_id
-                    {where_clause}
+                    {wc}
                     GROUP BY r.ideal_stop_nr
                 ),
                 unique_stops AS (
-                    SELECT 
-                        stop_abbr, 
-                        MAX(stop_point_text) as full_stop_name, 
+                    SELECT
+                        stop_abbr,
+                        MAX(stop_point_text) as full_stop_name,
                         MAX(stop_ort) as stop_ort,
                         MAX(stop_name) as clean_stop_name,
-                        MAX(lat) as lat, 
-                        MAX(lon) as lon 
-                    FROM dim_ort 
-                    WHERE lat IS NOT NULL AND lon IS NOT NULL {ort_filter}
+                        MAX(lat) as lat,
+                        MAX(lon) as lon
+                    FROM dim_ort
+                    WHERE lat IS NOT NULL AND lon IS NOT NULL{ort_filter}
                     GROUP BY stop_abbr
                 )
-                SELECT 
+                SELECT
                     u.stop_abbr as stop_id,
                     COALESCE(u.full_stop_name, u.stop_abbr) as stop_name,
                     u.stop_ort,
@@ -100,12 +98,12 @@ def get_stops(tagesart: str = None, ort: str = None, x_scenario: str = Header("s
                 LEFT JOIN stop_trips st ON u.stop_abbr = st.stop_abbr
                 ORDER BY st.avg_daily_trips DESC NULLS LAST
             """
-            result = con.execute(query).fetchall()
+            result = con.execute(query, wc.params + ort_params).fetchall()
         except Exception:
             # Fallback for operative DB: cub_schedule has no route_id, use cub_route instead
             query = f"""
                 WITH stop_trips AS (
-                    SELECT 
+                    SELECT
                         o.stop_abbr as stop_abbr,
                         COUNT(DISTINCT s.frt_id) / CAST(NULLIF(COUNT(DISTINCT s.day_id), 0) AS FLOAT) as avg_daily_trips,
                         COUNT(DISTINCT l.li_no) as num_lines
@@ -114,22 +112,22 @@ def get_stops(tagesart: str = None, ort: str = None, x_scenario: str = Header("s
                     JOIN dim_ort o ON cr.stop_id = o.stop_no
                     JOIN dim_line l ON s.li_id = l.li_id
                     JOIN dim_date d ON s.day_id = d.day_id
-                    {where_clause}
+                    {wc}
                     GROUP BY o.stop_abbr
                 ),
                 unique_stops AS (
-                    SELECT 
-                        stop_abbr, 
-                        MAX(stop_point_text) as full_stop_name, 
+                    SELECT
+                        stop_abbr,
+                        MAX(stop_point_text) as full_stop_name,
                         MAX(stop_ort) as stop_ort,
                         MAX(stop_name) as clean_stop_name,
-                        MAX(lat) as lat, 
-                        MAX(lon) as lon 
-                    FROM dim_ort 
-                    WHERE lat IS NOT NULL AND lon IS NOT NULL {ort_filter}
+                        MAX(lat) as lat,
+                        MAX(lon) as lon
+                    FROM dim_ort
+                    WHERE lat IS NOT NULL AND lon IS NOT NULL{ort_filter}
                     GROUP BY stop_abbr
                 )
-                SELECT 
+                SELECT
                     u.stop_abbr as stop_id,
                     COALESCE(u.full_stop_name, u.stop_abbr) as stop_name,
                     u.stop_ort,
@@ -142,7 +140,7 @@ def get_stops(tagesart: str = None, ort: str = None, x_scenario: str = Header("s
                 LEFT JOIN stop_trips st ON u.stop_abbr = st.stop_abbr
                 ORDER BY st.avg_daily_trips DESC NULLS LAST
             """
-            result = con.execute(query).fetchall()
+            result = con.execute(query, wc.params + ort_params).fetchall()
         return [
             {
                 "stop_id": row[0], 
@@ -357,14 +355,14 @@ def get_line_variants(line_no: str, direction_id: int = 1, x_scenario: str = Hea
     try:
         # Get all distinct variants (routes) for a line and direction
         # with their stop sequences and trip counts
-        query = f"""
+        query = """
             WITH route_trips AS (
-                SELECT 
+                SELECT
                     c.route_id,
                     COUNT(DISTINCT c.frt_id) as frequency
                 FROM cub_schedule c
                 JOIN dim_line l ON c.li_id = l.li_id
-                WHERE l.li_no = '{line_no}' AND l.li_ri_no = {direction_id}
+                WHERE l.li_no = ? AND l.li_ri_no = ?
                 GROUP BY c.route_id
             ),
             unique_stops AS (
@@ -391,7 +389,7 @@ def get_line_variants(line_no: str, direction_id: int = 1, x_scenario: str = Hea
             ORDER BY rt.frequency DESC
         """
         
-        variants = con.execute(query).fetchall()
+        variants = con.execute(query, [line_no, direction_id]).fetchall()
         
         if not variants:
             return {"sankey": {"nodes": [], "links": []}, "columns": [], "matrix": []}

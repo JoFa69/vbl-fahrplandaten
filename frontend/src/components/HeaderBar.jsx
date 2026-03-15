@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useLocation } from 'react-router-dom';
+import { useScenario } from '../context/ScenarioContext';
 
 const pageTitles = {
     '/': { breadcrumb: null, title: 'Übersicht' },
@@ -18,22 +19,11 @@ const pageTitles = {
 export default function HeaderBar({ actions }) {
     const location = useLocation();
     const pageInfo = pageTitles[location.pathname] || { breadcrumb: null, title: 'Seite' };
-
-    // Scenario State
-    const [scenario, setScenario] = useState('strategic');
-
-    useEffect(() => {
-        const saved = localStorage.getItem('vbl_scenario');
-        if (saved) setScenario(saved);
-        else localStorage.setItem('vbl_scenario', 'strategic');
-    }, []);
+    const { scenario, setScenario } = useScenario();
 
     const toggleScenario = (newScenario) => {
         if (newScenario === scenario) return;
-        localStorage.setItem('vbl_scenario', newScenario);
         setScenario(newScenario);
-        // Force reload to completely remount the app with the new database context
-        window.location.reload();
     };
 
     return (

@@ -10,6 +10,7 @@ import {
     LegendComponent
 } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
+import { formatTime as formatSeconds, formatFahrzeit } from '../../utils/formatters';
 
 // Register ECharts modules
 echarts.use([LineChart, GridComponent, TooltipComponent, DataZoomComponent, LegendComponent, CanvasRenderer]);
@@ -25,22 +26,6 @@ const getColorForLine = (lineNo) => {
         hash = str.charCodeAt(i) + ((hash << 5) - hash);
     }
     return palette[Math.abs(hash) % palette.length];
-};
-
-const formatSeconds = (sec) => {
-    if (sec == null || isNaN(sec)) return '--:--';
-    const h = Math.floor(sec / 3600);
-    const m = Math.floor((sec % 3600) / 60);
-    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-};
-
-const formatFahrzeit = (sec) => {
-    if (sec == null || isNaN(sec)) return '-';
-    const m = Math.floor(sec / 60);
-    const s = sec % 60;
-    if (m === 0) return `${s}s`;
-    if (s === 0) return `${m} Min`;
-    return `${m} Min ${s}s`;
 };
 
 const parseTimeToSeconds = (timeStr) => {

@@ -11,14 +11,7 @@ import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell,
     PieChart, Pie, ScatterChart, Scatter, ZAxis
 } from 'recharts';
-
-const formatTime = (seconds) => {
-    if (seconds === null || seconds === undefined) return "—";
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const displayH = h >= 24 ? h - 24 : h;
-    return `${String(displayH).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-};
+import { formatTime } from '../utils/formatters';
 
 const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {

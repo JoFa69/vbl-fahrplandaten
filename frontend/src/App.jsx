@@ -13,30 +13,41 @@ import UmlaufPage from "./pages/UmlaufPage";
 import UmlaufChartsPage from "./pages/UmlaufChartsPage";
 import GaragierungPage from "./pages/GaragierungPage";
 import KorridorAnalysePage from "./pages/KorridorAnalysePage";
+import { ScenarioProvider, useScenario } from "./context/ScenarioContext";
+import ErrorBoundary from "./components/ErrorBoundary";
 import "./index.css";
 
-function App() {
+function AppRoutes() {
+  const { scenario } = useScenario();
   return (
     <Router>
       <Routes>
-        <Route element={<AppShell />}>
-          <Route path="/" element={<DatenManagerPage />} />
-          <Route path="/daten" element={<DatenManagerPage />} />
-          <Route path="/netz" element={<NetzGeometriePage />} />
-          <Route path="/netz/plan" element={<NetworkMapPage />} />
-          <Route path="/netz/auslastung" element={<NetzAuslastungPage />} />
-          <Route path="/fahrplan" element={<FahrplanFrequenzPage />} />
-          <Route path="/haltestellen" element={<HaltestellenPage />} />
-          <Route path="/haltestellen/charts" element={<HaltestellenChartsPage />} />
-          <Route path="/vergleich" element={<FahrplanVergleichPage />} />
-          <Route path="/korridor" element={<KorridorAnalysePage />} />
-          <Route path="/umlaeufe" element={<UmlaufPage />} />
-          <Route path="/umlaeufe/charts" element={<UmlaufChartsPage />} />
-          <Route path="/garagen" element={<GaragierungPage />} />
+        <Route element={<AppShell key={scenario} />}>
+          <Route path="/" element={<ErrorBoundary><DatenManagerPage /></ErrorBoundary>} />
+          <Route path="/daten" element={<ErrorBoundary><DatenManagerPage /></ErrorBoundary>} />
+          <Route path="/netz" element={<ErrorBoundary><NetzGeometriePage /></ErrorBoundary>} />
+          <Route path="/netz/plan" element={<ErrorBoundary><NetworkMapPage /></ErrorBoundary>} />
+          <Route path="/netz/auslastung" element={<ErrorBoundary><NetzAuslastungPage /></ErrorBoundary>} />
+          <Route path="/fahrplan" element={<ErrorBoundary><FahrplanFrequenzPage /></ErrorBoundary>} />
+          <Route path="/haltestellen" element={<ErrorBoundary><HaltestellenPage /></ErrorBoundary>} />
+          <Route path="/haltestellen/charts" element={<ErrorBoundary><HaltestellenChartsPage /></ErrorBoundary>} />
+          <Route path="/vergleich" element={<ErrorBoundary><FahrplanVergleichPage /></ErrorBoundary>} />
+          <Route path="/korridor" element={<ErrorBoundary><KorridorAnalysePage /></ErrorBoundary>} />
+          <Route path="/umlaeufe" element={<ErrorBoundary><UmlaufPage /></ErrorBoundary>} />
+          <Route path="/umlaeufe/charts" element={<ErrorBoundary><UmlaufChartsPage /></ErrorBoundary>} />
+          <Route path="/garagen" element={<ErrorBoundary><GaragierungPage /></ErrorBoundary>} />
           <Route path="/einstellungen" element={<div className="p-8"><h2 className="text-2xl font-bold text-white">Einstellungen</h2><p className="text-text-muted mt-2">Konfiguration kommt bald.</p></div>} />
         </Route>
       </Routes>
     </Router>
+  );
+}
+
+function App() {
+  return (
+    <ScenarioProvider>
+      <AppRoutes />
+    </ScenarioProvider>
   );
 }
 
