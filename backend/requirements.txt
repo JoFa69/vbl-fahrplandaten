@@ -1,7 +1,7 @@
 fastapi
-uvicorn
+uvicorn[standard]
 duckdb
 pandas
+python-dotenv
 pydantic
 google-genai
-python-dotenv

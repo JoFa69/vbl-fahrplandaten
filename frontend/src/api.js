@@ -1,4 +1,6 @@
-const API_BASE = "/api";
+const API_BASE = import.meta.env.VITE_API_BASE_URL 
+    ? `${import.meta.env.VITE_API_BASE_URL}/api` 
+    : "/api";
 
 // Helper function to dynamically add headers from localStorage (like scenario)
 async function apiFetch(url, options = {}) {
