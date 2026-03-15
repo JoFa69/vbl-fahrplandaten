@@ -38,17 +38,24 @@ class Database:
                 raise ValueError(f"MotherDuck token missing in Render/Failover environment for scenario {scenario}")
             
             # Use MotherDuck connection
-            if "motherduck" not in cls._instances:
+            # We maintain separate connections per scenario to avoid schema switching conflicts
+            instance_key = f"motherduck_{scenario}"
+            if instance_key not in cls._instances:
                 try:
-                    print(f"Connecting to MotherDuck (token: {md_token[:10]}...)...")
-                    # Connect to MotherDuck. Database name is 'VBL_Fahrplandaten'
+                    print(f"Connecting to MotherDuck for {scenario} (token: {md_token[:10]}...)...")
+                    # Connect to MotherDuck generally
                     con = duckdb.connect(f"md:VBL_Fahrplandaten?motherduck_token={md_token}")
-                    cls._instances["motherduck"] = con
-                    print("Successfully connected to MotherDuck.")
+                    
+                    # Switch to the correct schema
+                    # DuckDB MotherDuck uses database.schema format
+                    con.execute(f"SET schema = '{scenario}'")
+                    
+                    cls._instances[instance_key] = con
+                    print(f"Successfully connected to MotherDuck schema: {scenario}")
                 except Exception as e:
-                    print(f"FAILED to connect to MotherDuck: {e}")
+                    print(f"FAILED to connect to MotherDuck {scenario}: {e}")
                     raise e
-            return cls._instances["motherduck"].cursor()
+            return cls._instances[instance_key].cursor()
 
         # Local File Fallback
         if scenario not in DB_PATHS:

@@ -10,6 +10,12 @@ import os
 
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
+def column_exists(con, table_name, column_name):
+    try:
+        con.execute(f"SELECT {column_name} FROM {table_name} LIMIT 0")
+        return True
+    except:
+        return False
 
 @router.get("/stats")
 def get_general_stats(reference_id: Optional[str] = Query(None, description="Fahrplan Reference ID for comparison"), x_scenario: str = Header("strategic")):
@@ -175,11 +181,14 @@ def get_geometry_metrics(
                 where_clause = "AND s.fahrtart_nr = ?"
                 params.append(fahrtart)
                 
+            has_route_id = column_exists(con, "cub_schedule", "route_id")
+            variant_col = "s.route_id" if has_route_id else "NULL"
+            
             query = f"""
                 SELECT 
                     l.li_no, 
                     MAX(l.li_text) as li_text, 
-                    COUNT(DISTINCT s.route_id) as variant_count,
+                    COUNT(DISTINCT {variant_col}) as variant_count,
                     COUNT(DISTINCT s.frt_id) as trip_count
                 FROM dim_line l
                 LEFT JOIN cub_schedule s ON l.li_id = s.li_id {where_clause}
@@ -219,6 +228,13 @@ def get_geometry_metrics(
                 main_where += f" {main_connector} cs.fahrtart_nr = ?"
                 main_params.append(fahrtart)
 
+            has_route_id = column_exists(con, "cub_schedule", "route_id")
+            has_fahrtart = column_exists(con, "cub_schedule", "fahrtart_nr")
+            
+            if not has_route_id:
+                # Return empty list or simplified list if we don't have variants info in this dataset
+                return []
+
             query = f"""
                 WITH route_stops AS (
                     SELECT 
@@ -251,7 +267,7 @@ def get_geometry_metrics(
                 route_volume AS (
                     SELECT route_id, COUNT(*) as volume
                     FROM cub_schedule
-                    {volume_where}
+                    {volume_where if has_fahrtart or not fahrtart else volume_where.replace("AND fahrtart_nr = ?", "").replace("WHERE fahrtart_nr = ?", "")}
                     GROUP BY route_id
                 )
                 SELECT DISTINCT 
@@ -270,7 +286,7 @@ def get_geometry_metrics(
                 LEFT JOIN start_stop s ON r.route_id = s.route_id
                 LEFT JOIN end_stop e ON r.route_id = e.route_id
                 LEFT JOIN route_volume v ON r.route_id = v.route_id
-                {main_where}
+                {main_where if has_fahrtart or not fahrtart else main_where.replace("AND cs.fahrtart_nr = ?", "").replace("WHERE cs.fahrtart_nr = ?", "")}
                 ORDER BY CAST(l.li_no as INTEGER), l.li_var_no
             """
             result = con.execute(query, volume_params + main_params).fetchall()
@@ -340,19 +356,16 @@ def get_time_metrics(
     metric: str = Query("duration", enum=["duration", "speed"], description="Metric type"),
     x_scenario: str = Header("strategic")
 ):
-    """
-    Get time-based metrics.
-    - metric="duration": Average trip duration (minutes).
-      - Default: Avg duration per Line.
-      - line_id: Avg duration per Variant (Route).
-      - variant_id: Avg duration per Hour of day (Profil-Varianz).
-    """
     con = get_db(x_scenario)
     try:
         where_clause = ""
         params = []
         
+        has_route_id = column_exists(con, "cub_schedule", "route_id")
+        
         if variant_id:
+            if not has_route_id:
+                return [] # Can't filter by variant if no route_id exists
             where_clause = "WHERE s.route_id = ?"
             params.append(variant_id)
         elif line_id:
@@ -361,7 +374,6 @@ def get_time_metrics(
 
         if metric == "duration":
             if variant_id:
-                # Drill down: Duration per Hour for a specific variant
                 query = f"""
                     SELECT 
                         CAST(s.frt_start / 3600 AS INTEGER) as label,
@@ -371,8 +383,7 @@ def get_time_metrics(
                     GROUP BY 1
                     ORDER BY 1
                 """
-            elif line_id:
-                # Drill down: Duration per Variant for a specific line
+            elif line_id and has_route_id:
                 query = f"""
                     SELECT 
                         r.route_hash as label,
@@ -385,7 +396,6 @@ def get_time_metrics(
                     ORDER BY value DESC
                 """
             else:
-                 # High level: Avg Duration per Line
                 query = """
                     SELECT 
                         l.li_no as label,
@@ -398,15 +408,7 @@ def get_time_metrics(
                 """
                 
             result = con.execute(query, params).fetchall()
-            
-            data = []
-            for row in result:
-                item = {"label": str(row[0]), "value": round(row[1], 1)}
-                if len(row) > 2:
-                    item["id"] = row[2]
-                data.append(item)
-            return data
-
+            return [{"label": str(row[0]), "value": round(row[1], 1), "id": row[2] if len(row) > 2 else None} for row in result]
         else:
              raise HTTPException(status_code=501, detail="Speed metric not yet implemented")
 
@@ -480,6 +482,10 @@ def get_route_geometry(line_no: str, route_id: Optional[int] = Query(None), x_sc
     """
     con = get_db(x_scenario)
     try:
+        has_route_id = column_exists(con, "cub_schedule", "route_id")
+        if not has_route_id:
+            raise HTTPException(status_code=404, detail="Route geometry not available in this scenario (no route mapping)")
+
         route_info = []
         if route_id:
             route_info.append({"route_id": route_id, "volume": 1})
@@ -566,8 +572,16 @@ def get_all_primary_routes(
         params = []
         where_clause = ""
         if fahrtart:
-            where_clause = "WHERE fahrtart_nr = ?"
-            params.append(fahrtart)
+            if column_exists(con, "cub_schedule", "fahrtart_nr"):
+                where_clause = "WHERE fahrtart_nr = ?"
+                params.append(fahrtart)
+            else:
+                # Silently ignore fahrtart filter if column doesn't exist
+                where_clause = ""
+
+        has_route_id = column_exists(con, "cub_schedule", "route_id")
+        if not has_route_id:
+            return []
 
         query = f"""
             WITH route_stops AS (
@@ -809,22 +823,25 @@ def get_timetable_kpis(
         symmetry = {f"Dir {row[0]}": int(row[1]) if row[1] else 0 for row in res_sym}
 
         # 3. Route variants split
-        query_routes = f"""
-            SELECT 
-                r.route_hash,
-                l.li_ri_no,
-                ROUND(COUNT(DISTINCT s.frt_id) * 1.0 / NULLIF(COUNT(DISTINCT s.day_id), 0)) as trip_count
-            FROM cub_schedule s
-            JOIN dim_route r ON s.route_id = r.route_id
-            JOIN dim_line l ON s.li_id = l.li_id
-            JOIN dim_date d ON s.day_id = d.day_id
-            {where_clause}
-            GROUP BY 1, 2
-            ORDER BY trip_count DESC
-            LIMIT 10
-        """
-        res_routes = con.execute(query_routes, params).fetchall()
-        routes = [{"route_hash": row[0], "direction": row[1], "count": row[2]} for row in res_routes]
+        has_route_id = column_exists(con, "cub_schedule", "route_id")
+        routes = []
+        if has_route_id:
+            query_routes = f"""
+                SELECT 
+                    r.route_hash,
+                    l.li_ri_no,
+                    ROUND(COUNT(DISTINCT s.frt_id) * 1.0 / NULLIF(COUNT(DISTINCT s.day_id), 0)) as trip_count
+                FROM cub_schedule s
+                JOIN dim_route r ON s.route_id = r.route_id
+                JOIN dim_line l ON s.li_id = l.li_id
+                JOIN dim_date d ON s.day_id = d.day_id
+                {where_clause}
+                GROUP BY 1, 2
+                ORDER BY trip_count DESC
+                LIMIT 10
+            """
+            res_routes = con.execute(query_routes, params).fetchall()
+            routes = [{"route_hash": row[0], "direction": row[1], "count": row[2]} for row in res_routes]
 
         return {
             "first_trip_sec": res_base[0] if res_base[0] else None,
@@ -904,16 +921,10 @@ def get_network_nodes(
         
         where_sql_literal = ""
         clauses = []
-        if tagesart:
-             clauses.append(f"d.tagesart_abbr = '{tagesart.replace(chr(39), chr(39)*2)}'")
-        if time_from is not None and time_to is not None:
-             clauses.append(f"s.frt_start BETWEEN {int(time_from)} AND {int(time_to)}")
-        if richtung is not None:
-             clauses.append(f"l.li_ri_no = {int(richtung)}")
-        if clauses:
-             where_sql_literal = "WHERE " + " AND ".join(clauses)
-
-        con.execute(f"CREATE TEMP VIEW active_trips_v AS SELECT s.frt_id, s.route_id, l.li_no, l.li_ri_no, s.li_id, s.frt_start FROM cub_schedule s JOIN dim_date d ON s.day_id = d.day_id JOIN dim_line l ON s.li_id = l.li_id {where_sql_literal}")
+        has_route_id = column_exists(con, "cub_schedule", "route_id")
+        route_col = "s.route_id" if has_route_id else "NULL"
+        
+        con.execute(f"CREATE TEMP VIEW active_trips_v AS SELECT s.frt_id, {route_col} as route_id, l.li_no, l.li_ri_no, s.li_id, s.frt_start FROM cub_schedule s JOIN dim_date d ON s.day_id = d.day_id JOIN dim_line l ON s.li_id = l.li_id {where_sql_literal}")
         
         con.execute(f"CREATE TEMP VIEW whitelist_v AS SELECT col0 as stop_name FROM (VALUES {wl_values})")
         

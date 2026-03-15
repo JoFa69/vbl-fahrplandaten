@@ -30,6 +30,9 @@ def sync():
         print(f"\n--- Syncing {scenario} ({relative_path}) ---")
         abs_path = os.path.abspath(relative_path)
         
+        # Ensure schema exists in MotherDuck
+        md_con.execute(f"CREATE SCHEMA IF NOT EXISTS VBL_Fahrplandaten.{scenario}")
+        
         # Attach local db
         temp_alias = f"db_{scenario}"
         md_con.execute(f"ATTACH '{abs_path}' AS {temp_alias} (READ_ONLY)")
@@ -38,10 +41,9 @@ def sync():
         tables = md_con.execute(f"SELECT table_name FROM information_schema.tables WHERE table_schema = 'main' AND table_catalog = '{temp_alias}'").fetchall()
         
         for (table_name,) in tables:
-            print(f"  Uploading table: {table_name}...")
+            print(f"  Uploading table: {table_name} to schema {scenario}...")
             # We use CREATE OR REPLACE to ensure we have the latest version
-            # Note: MotherDuck handles the data transfer
-            md_con.execute(f"CREATE OR REPLACE TABLE VBL_Fahrplandaten.main.{table_name} AS SELECT * FROM {temp_alias}.main.{table_name}")
+            md_con.execute(f"CREATE OR REPLACE TABLE VBL_Fahrplandaten.{scenario}.{table_name} AS SELECT * FROM {temp_alias}.main.{table_name}")
         
         md_con.execute(f"DETACH {temp_alias}")
     
