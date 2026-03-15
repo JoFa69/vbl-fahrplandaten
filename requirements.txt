@@ -1,6 +1,6 @@
 fastapi
 uvicorn[standard]
-duckdb
+duckdb==1.4.4
 pandas
 python-dotenv
 pydantic

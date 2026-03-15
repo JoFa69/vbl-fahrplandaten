@@ -29,7 +29,7 @@ app.include_router(umlaeufe.router)
 # Serve Frontend (Monolithic Mode)
 # If the frontend/dist directory exists, we serve it as static files.
 # This allows the app to be deployed as a single service on Render.
-frontend_dist = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "..", "frontend", "dist")
+frontend_dist = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend", "dist")
 
 if os.path.exists(frontend_dist):
     # Mount assets (CSS, JS, Images)
@@ -37,6 +37,10 @@ if os.path.exists(frontend_dist):
     if os.path.exists(assets_dir):
         app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
     
+    @app.get("/")
+    async def serve_index():
+        return FileResponse(os.path.join(frontend_dist, "index.html"))
+
     # Catch-all route for React Router (SPA)
     @app.get("/{full_path:path}")
     async def serve_frontend(full_path: str):
@@ -47,9 +51,7 @@ if os.path.exists(frontend_dist):
             
         # Serve index.html for all other routes
         return FileResponse(os.path.join(frontend_dist, "index.html"))
-
-    @app.get("/")
-    async def serve_index():
-        return FileResponse(os.path.join(frontend_dist, "index.html"))
+else:
+    print(f"DEBUG: Frontend dist not found at {frontend_dist}")
 
 # No default / message to avoid hiding the frontend

@@ -1,11 +1,12 @@
 import duckdb
 import os
 
-# Paths relative to where uvicorn is run (usually from backend root)
-# The files are in the root project directory, not in data/
+# Paths relative to the project root
+# We use absolute paths to avoid issues with different working directories
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DB_PATHS = {
-    "strategic": os.path.join(os.path.dirname(__file__), "..", "..", "20261231_fahrplandaten_2027.db"),
-    "operative": os.path.join(os.path.dirname(__file__), "..", "..", "operative_transformed.db") # Placeholder
+    "strategic": os.path.join(BASE_DIR, "20261231_fahrplandaten_2027.db"),
+    "operative": os.path.join(BASE_DIR, "operative_transformed.db")
 }
 
 class Database:
@@ -13,16 +14,40 @@ class Database:
 
     @classmethod
     def get_connection(cls, scenario="strategic"):
-        # Check if MotherDuck is enabled via environment variable
+        # Detect environment
+        is_render = os.environ.get("RENDER") == "true"
         md_token = os.environ.get("MOTHERDUCK_TOKEN")
         
-        if md_token:
+        # Local File Path
+        db_path = DB_PATHS.get(scenario)
+        local_exists = db_path and os.path.exists(db_path)
+
+        # Logic: 
+        # 1. If on Render, MUST use MotherDuck.
+        # 2. If locally, use local file if it exists. 
+        # 3. If locally and file missing, but token present, use MotherDuck.
+
+        use_motherduck = False
+        if is_render:
+            use_motherduck = True
+        elif not local_exists and md_token:
+            use_motherduck = True
+        
+        if use_motherduck:
+            if not md_token:
+                raise ValueError(f"MotherDuck token missing in Render/Failover environment for scenario {scenario}")
+            
             # Use MotherDuck connection
             if "motherduck" not in cls._instances:
-                print("Connecting to MotherDuck...")
-                # Connect to MotherDuck. Database name is 'VBL_Fahrplandaten'
-                con = duckdb.connect(f"md:VBL_Fahrplandaten?motherduck_token={md_token}")
-                cls._instances["motherduck"] = con
+                try:
+                    print(f"Connecting to MotherDuck (token: {md_token[:10]}...)...")
+                    # Connect to MotherDuck. Database name is 'VBL_Fahrplandaten'
+                    con = duckdb.connect(f"md:VBL_Fahrplandaten?motherduck_token={md_token}")
+                    cls._instances["motherduck"] = con
+                    print("Successfully connected to MotherDuck.")
+                except Exception as e:
+                    print(f"FAILED to connect to MotherDuck: {e}")
+                    raise e
             return cls._instances["motherduck"].cursor()
 
         # Local File Fallback
