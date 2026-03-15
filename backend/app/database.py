@@ -20,11 +20,8 @@ class Database:
             # Use MotherDuck connection
             if "motherduck" not in cls._instances:
                 print("Connecting to MotherDuck...")
-                # Connect to MotherDuck. Database name is assumed to be 'vbl_fahrplandaten'
-                # or we use the default 'my_db' if not specified, 
-                # but let's assume the user will have it under a specific name.
-                # Usually: md:<dbname>?motherduck_token=<token>
-                con = duckdb.connect(f"md:vbl_fahrplandaten?motherduck_token={md_token}")
+                # Connect to MotherDuck. Database name is 'VBL_Fahrplandaten'
+                con = duckdb.connect(f"md:VBL_Fahrplandaten?motherduck_token={md_token}")
                 cls._instances["motherduck"] = con
             return cls._instances["motherduck"].cursor()
 
