@@ -42,11 +42,14 @@ if os.path.exists(frontend_dist):
     async def serve_frontend(full_path: str):
         # Allow API calls to pass through
         if full_path.startswith("api/"):
-            return {"detail": "API endpoint not found"} # Or let FastAPI handle it
+            from fastapi import HTTPException
+            raise HTTPException(status_code=404, detail="API endpoint not found")
             
         # Serve index.html for all other routes
         return FileResponse(os.path.join(frontend_dist, "index.html"))
 
-@app.get("/")
-def read_root():
-    return {"message": "VDV Schedule API is running"}
+    @app.get("/")
+    async def serve_index():
+        return FileResponse(os.path.join(frontend_dist, "index.html"))
+
+# No default / message to avoid hiding the frontend
